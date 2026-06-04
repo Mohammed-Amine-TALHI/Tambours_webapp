@@ -1,0 +1,9 @@
+# Root .gitignore — backend/ and frontend/ each have their own .gitignore too.
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+
+# Claude Code local state (machine-specific permissions etc.)
+.claude/settings.local.json

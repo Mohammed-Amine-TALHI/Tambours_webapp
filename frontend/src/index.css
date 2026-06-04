@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* OCP-inspired theme tokens */
+:root {
+  color-scheme: light;
+  font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc; /* slate-50 */
+  color: #0f172a;      /* slate-900 */
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Shared input utility used by admin forms */
+.input {
+  width: 100%;
+  border: 1px solid #cbd5e1;        /* slate-300 */
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  background-color: #fff;
+  color: #0f172a;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input:focus {
+  outline: none;
+  border-color: #059669;            /* emerald-600 */
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
