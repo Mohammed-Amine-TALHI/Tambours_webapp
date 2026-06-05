@@ -145,24 +145,30 @@ class ForgotPasswordController extends Controller
             ]);
         }
 
-        $user->forceFill([
-            'password'             => $validated['new_password'], // hashed cast
-            'must_change_password' => false,
-            'password_changed_at'  => now(),
-            'failed_login_count'   => 0,
-            'locked_until'         => null,
-        ])->save();
+        // Atomic: either the new password sticks AND the OTP is burned, or
+        // neither happens. Without the transaction a crash between the two
+        // writes could leave the password changed while the OTP stays valid
+        // and reusable until it expires.
+        DB::transaction(function () use ($user, $validated, $otpRow, $email) {
+            $user->forceFill([
+                'password'             => $validated['new_password'], // hashed cast
+                'must_change_password' => false,
+                'password_changed_at'  => now(),
+                'failed_login_count'   => 0,
+                'locked_until'         => null,
+            ])->save();
 
-        // Burn the OTP
-        DB::table('password_reset_otps')
-            ->where('id', $otpRow->id)
-            ->update(['used_at' => now(), 'updated_at' => now()]);
+            // Burn the OTP
+            DB::table('password_reset_otps')
+                ->where('id', $otpRow->id)
+                ->update(['used_at' => now(), 'updated_at' => now()]);
 
-        // Also burn any other outstanding OTPs for this email
-        DB::table('password_reset_otps')
-            ->where('email', $email)
-            ->whereNull('used_at')
-            ->update(['used_at' => now()]);
+            // Also burn any other outstanding OTPs for this email
+            DB::table('password_reset_otps')
+                ->where('email', $email)
+                ->whereNull('used_at')
+                ->update(['used_at' => now()]);
+        });
 
         return response()->json([
             'message' => 'Mot de passe réinitialisé. Vous pouvez maintenant vous connecter.',

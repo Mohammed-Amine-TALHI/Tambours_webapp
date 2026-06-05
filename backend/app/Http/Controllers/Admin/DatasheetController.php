@@ -47,8 +47,13 @@ class DatasheetController extends Controller
      */
     public function destroy(Datasheet $datasheet): JsonResponse
     {
-        Storage::disk('local')->delete($datasheet->file_path);
+        $path = $datasheet->file_path;
+
+        // Delete the DB record first, then the file. A leftover file is
+        // harmless (disk usage only), whereas a surviving record that points
+        // at a missing file would surface to users as a broken download.
         $datasheet->delete();
+        Storage::disk('local')->delete($path);
 
         return response()->json(['message' => 'Fiche supprimée.']);
     }
