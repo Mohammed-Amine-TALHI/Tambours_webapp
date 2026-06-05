@@ -9,6 +9,7 @@ use App\Support\PasswordGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AdminUserController extends Controller
 {
@@ -45,16 +46,11 @@ class AdminUserController extends Controller
         $domain = EmailDomain::findOrFail($validated['email_domain_id']);
         $email  = strtolower($validated['email_local'] . '@' . $domain->domain);
 
-        // Ensure email uniqueness across users
-        $request->validate([
-            'email_local' => [Rule::unique('users', 'email')->where(fn ($q) => $q->where('email', $email))->ignore(null)],
-        ], [], ['email_local' => 'email']);
-
+        // Ensure the assembled email is unique across users (422 with errors.email_local).
         if (User::where('email', $email)->exists()) {
-            return response()->json([
-                'message' => 'A user with this email already exists.',
-                'errors'  => ['email_local' => ['This email is already in use.']],
-            ], 422);
+            throw ValidationException::withMessages([
+                'email_local' => ['This email is already in use.'],
+            ]);
         }
 
         $tempPassword = PasswordGenerator::generate(14);

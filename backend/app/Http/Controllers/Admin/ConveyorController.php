@@ -9,6 +9,7 @@ use App\Services\ConveyorCharacteristicsImporter;
 use App\Support\SchemaPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ConveyorController extends Controller
 {
@@ -80,20 +81,23 @@ class ConveyorController extends Controller
         $updated   = [];
         $unmatched = [];
 
-        foreach (Conveyor::all() as $conveyor) {
-            $key   = strtoupper(preg_replace('/\s+/', '', (string) $conveyor->code));
-            $chars = $map[$key] ?? null;
+        // One transaction: either every matched conveyor is filled, or none are.
+        DB::transaction(function () use ($map, &$updated, &$unmatched) {
+            foreach (Conveyor::all() as $conveyor) {
+                $key   = strtoupper(preg_replace('/\s+/', '', (string) $conveyor->code));
+                $chars = $map[$key] ?? null;
 
-            if (empty($chars)) {
-                $unmatched[] = $conveyor->code;
-                continue;
+                if (empty($chars)) {
+                    $unmatched[] = $conveyor->code;
+                    continue;
+                }
+
+                $conveyor->update([
+                    'characteristics' => array_merge($conveyor->characteristics ?? [], $chars),
+                ]);
+                $updated[] = ['code' => $conveyor->code, 'fields' => count($chars)];
             }
-
-            $conveyor->update([
-                'characteristics' => array_merge($conveyor->characteristics ?? [], $chars),
-            ]);
-            $updated[] = ['code' => $conveyor->code, 'fields' => count($chars)];
-        }
+        });
 
         return response()->json([
             'message'       => count($updated) . ' convoyeur(s) mis à jour.',

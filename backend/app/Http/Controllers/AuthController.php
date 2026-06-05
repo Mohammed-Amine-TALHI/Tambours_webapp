@@ -49,10 +49,13 @@ class AuthController extends Controller
             $user->increment('failed_login_count');
 
             if ($user->failed_login_count >= User::MAX_FAILED_ATTEMPTS) {
-                $user->update([
+                // forceFill: locked_until / failed_login_count are intentionally
+                // not mass-assignable, so update() would silently drop them and
+                // the account would never actually lock.
+                $user->forceFill([
                     'locked_until'       => now()->addMinutes(User::LOCKOUT_MINUTES),
                     'failed_login_count' => 0,
-                ]);
+                ])->save();
             }
 
             throw ValidationException::withMessages([

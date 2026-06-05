@@ -20,6 +20,32 @@ const api = axios.create({
 })
 
 /**
+ * Global session-expiry handling. If any request comes back 401 (the Laravel
+ * session has expired or the user isn't authenticated), bounce to /login so the
+ * user isn't stranded on a page making silently-failing calls.
+ *
+ * Exclusions:
+ *  - the public /api/me hydration probe (returns 200 + null, never 401, but
+ *    guarded anyway), and
+ *  - the auth pages themselves, to avoid a redirect loop.
+ */
+const AUTH_PATHS = ['/login', '/forgot-password', '/reset-password', '/first-login']
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status
+    const url = error?.config?.url ?? ''
+    if (status === 401 && !url.includes('/api/me')) {
+      const onAuthPage = AUTH_PATHS.some((p) => window.location.pathname.startsWith(p))
+      if (!onAuthPage) {
+        window.location.assign('/login')
+      }
+    }
+    return Promise.reject(error)
+  },
+)
+
+/**
  * Pre-flight call to fetch the CSRF cookie. Must run once before any
  * state-changing request (POST/PATCH/DELETE/PUT).
  */
