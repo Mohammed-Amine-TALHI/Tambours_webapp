@@ -15,7 +15,7 @@ export default function OperatorShell({ children, breadcrumb }) {
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-screen-2xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/app" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-emerald-600 text-white flex items-center justify-center font-semibold">T</div>
+            <img src="/ocp-logo.png" alt="OCP" className="h-10 w-auto object-contain" />
             <span className="font-semibold text-slate-800">Tambours · Installation KOCH</span>
           </Link>
           <div className="flex items-center gap-3">
