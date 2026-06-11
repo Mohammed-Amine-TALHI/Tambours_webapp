@@ -25,6 +25,7 @@ export default function SchemaImport() {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [dragOver, setDragOver] = useState(false)
 
   const [token, setToken] = useState(null)
   const [rows, setRows] = useState([]) // { inst_label, drum_count, numeros, has_image, include, code, name, family }
@@ -70,6 +71,7 @@ export default function SchemaImport() {
   }
 
   const included = rows.filter((r) => r.include)
+  const allIncluded = rows.length > 0 && included.length === rows.length
   const codes = included.map((r) => r.code.trim().toUpperCase())
   const hasEmptyCode = included.some((r) => r.code.trim() === '')
   const dupCodes = codes.filter((c, i) => c !== '' && codes.indexOf(c) !== i)
@@ -112,10 +114,10 @@ export default function SchemaImport() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-800">Importer un fichier Excel</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Importer un fichier Excel</h1>
+        <p className="mt-1 text-sm text-slate-500">
           Chargez le classeur « ETAT DES TAMBOURS » pour créer ou mettre à jour les convoyeurs,
           tambours et composants. Les fiches techniques déjà associées sont conservées.
         </p>
@@ -124,35 +126,71 @@ export default function SchemaImport() {
       {/* Stepper */}
       <ol className="flex items-center gap-2 text-sm">
         <Step n={1} label="Fichier" active={step === 'upload'} done={step !== 'upload'} />
-        <span className="text-slate-300">→</span>
+        <Connector done={step !== 'upload'} />
         <Step n={2} label="Correspondance" active={step === 'mapping'} done={step === 'done'} />
-        <span className="text-slate-300">→</span>
+        <Connector done={step === 'done'} />
         <Step n={3} label="Terminé" active={step === 'done'} done={false} />
       </ol>
 
       {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {step === 'upload' && (
-        <form onSubmit={onUpload} className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">Fichier .xlsx</label>
+        <form onSubmit={onUpload} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          {/* Zone de dépôt : clic ou glisser-déposer */}
+          <label
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setDragOver(false)
+              const f = e.dataTransfer.files?.[0]
+              if (f) setFile(f)
+            }}
+            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${
+              dragOver
+                ? 'border-emerald-500 bg-emerald-50'
+                : file
+                  ? 'border-emerald-300 bg-emerald-50/40'
+                  : 'border-slate-300 bg-slate-50/60 hover:border-emerald-300 hover:bg-emerald-50/30'
+            }`}
+          >
             <input
               ref={fileInput}
               type="file"
               accept=".xlsx,.xls"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+              className="hidden"
             />
-            <p className="text-xs text-slate-400">Taille maximale : 20 Mo.</p>
-          </div>
+            <svg className="h-9 w-9 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <path d="m7 9 5-5 5 5" />
+              <path d="M12 4v12" />
+            </svg>
+            {file ? (
+              <>
+                <span className="text-sm font-semibold text-emerald-800">{file.name}</span>
+                <span className="text-xs text-slate-500">
+                  {Math.round(file.size / 1024)} Ko — cliquez pour changer de fichier
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-sm font-semibold text-slate-700">
+                  Glissez le fichier ici, ou cliquez pour parcourir
+                </span>
+                <span className="text-xs text-slate-400">Format .xlsx ou .xls · 20 Mo maximum</span>
+              </>
+            )}
+          </label>
+
           <button
             type="submit"
             disabled={!file || busy}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium px-5 py-2.5 rounded-lg inline-flex items-center justify-center min-w-44"
+            className="inline-flex min-w-44 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:from-emerald-800 hover:to-teal-700 disabled:opacity-50"
           >
             {busy ? <Spinner variant="onColor" /> : 'Analyser le fichier'}
           </button>
@@ -161,92 +199,102 @@ export default function SchemaImport() {
 
       {step === 'mapping' && (
         <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-left">
-                <tr>
-                  <th className="px-3 py-2 font-medium w-10"></th>
-                  <th className="px-3 py-2 font-medium">Inst (Excel)</th>
-                  <th className="px-3 py-2 font-medium">Tambours</th>
-                  <th className="px-3 py-2 font-medium">Code convoyeur</th>
-                  <th className="px-3 py-2 font-medium">Nom (facultatif)</th>
-                  <th className="px-3 py-2 font-medium w-28">Famille</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rows.map((r, i) => {
-                  const codeUp = r.code.trim().toUpperCase()
-                  const isDup = codeUp !== '' && dupCodes.includes(codeUp)
-                  return (
-                    <tr key={i} className={r.include ? '' : 'opacity-40'}>
-                      <td className="px-3 py-2 align-top">
-                        <input
-                          type="checkbox"
-                          checked={r.include}
-                          onChange={(e) => updateRow(i, { include: e.target.checked })}
-                          className="mt-1.5 accent-emerald-600"
-                        />
-                      </td>
-                      <td className="px-3 py-2 align-top">
-                        <div className="font-medium text-slate-800">{r.inst_label}</div>
-                        {!r.has_image && (
-                          <div className="text-xs text-amber-600 mt-0.5">aucune image</div>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 align-top">
-                        <div className="text-slate-700">{r.drum_count}</div>
-                        <div className="text-xs text-slate-400">N° {r.numeros.join(', ')}</div>
-                      </td>
-                      <td className="px-3 py-2 align-top">
-                        <input
-                          list="known-codes"
-                          disabled={!r.include}
-                          value={r.code}
-                          onChange={(e) => {
-                            const code = e.target.value.toUpperCase()
-                            updateRow(i, { code, family: familyOf(code) })
-                          }}
-                          placeholder="ex : T15"
-                          className={`input font-mono uppercase ${isDup ? 'border-red-400 bg-red-50' : ''}`}
-                        />
-                        {isDup && <div className="text-xs text-red-600 mt-0.5">code en double</div>}
-                      </td>
-                      <td className="px-3 py-2 align-top">
-                        <input
-                          disabled={!r.include}
-                          value={r.name}
-                          onChange={(e) => updateRow(i, { name: e.target.value })}
-                          placeholder={r.inst_label}
-                          className="input"
-                        />
-                      </td>
-                      <td className="px-3 py-2 align-top">
-                        <input
-                          disabled={!r.include}
-                          value={r.family}
-                          onChange={(e) => updateRow(i, { family: e.target.value.toUpperCase() })}
-                          className="input font-mono uppercase"
-                        />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[44rem] text-sm">
+                <thead className="bg-slate-50 text-left text-slate-500">
+                  <tr>
+                    <th className="w-10 px-3 py-2 font-medium">
+                      <input
+                        type="checkbox"
+                        checked={allIncluded}
+                        onChange={(e) => setRows((rs) => rs.map((r) => ({ ...r, include: e.target.checked })))}
+                        title="Tout sélectionner / désélectionner"
+                        className="accent-emerald-600"
+                      />
+                    </th>
+                    <th className="px-3 py-2 font-medium">Inst (Excel)</th>
+                    <th className="px-3 py-2 font-medium">Tambours</th>
+                    <th className="px-3 py-2 font-medium">Code convoyeur</th>
+                    <th className="px-3 py-2 font-medium">Nom (facultatif)</th>
+                    <th className="w-28 px-3 py-2 font-medium">Famille</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {rows.map((r, i) => {
+                    const codeUp = r.code.trim().toUpperCase()
+                    const isDup = codeUp !== '' && dupCodes.includes(codeUp)
+                    return (
+                      <tr key={i} className={r.include ? '' : 'opacity-40'}>
+                        <td className="px-3 py-2 align-top">
+                          <input
+                            type="checkbox"
+                            checked={r.include}
+                            onChange={(e) => updateRow(i, { include: e.target.checked })}
+                            className="mt-1.5 accent-emerald-600"
+                          />
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <div className="font-medium text-slate-800">{r.inst_label}</div>
+                          {!r.has_image && (
+                            <div className="mt-0.5 text-xs text-amber-600">aucune image</div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <div className="text-slate-700">{r.drum_count}</div>
+                          <div className="text-xs text-slate-400">N° {r.numeros.join(', ')}</div>
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <input
+                            list="known-codes"
+                            disabled={!r.include}
+                            value={r.code}
+                            onChange={(e) => {
+                              const code = e.target.value.toUpperCase()
+                              updateRow(i, { code, family: familyOf(code) })
+                            }}
+                            placeholder="ex : T15"
+                            className={`input font-mono uppercase ${isDup ? 'border-red-400 bg-red-50' : ''}`}
+                          />
+                          {isDup && <div className="mt-0.5 text-xs text-red-600">code en double</div>}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <input
+                            disabled={!r.include}
+                            value={r.name}
+                            onChange={(e) => updateRow(i, { name: e.target.value })}
+                            placeholder={r.inst_label}
+                            className="input"
+                          />
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <input
+                            disabled={!r.include}
+                            value={r.family}
+                            onChange={(e) => updateRow(i, { family: e.target.value.toUpperCase() })}
+                            className="input font-mono uppercase"
+                          />
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
           <datalist id="known-codes">
             {KNOWN_CODES.map((c) => <option key={c} value={c} />)}
           </datalist>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={onCommit}
               disabled={!canCommit || busy}
-              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium px-5 py-2.5 rounded-lg inline-flex items-center justify-center min-w-52"
+              className="inline-flex min-w-52 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:from-emerald-800 hover:to-teal-700 disabled:opacity-50"
             >
               {busy ? <Spinner variant="onColor" /> : `Importer ${included.length} convoyeur(s)`}
             </button>
-            <button onClick={reset} className="text-slate-600 hover:text-slate-900 px-4 py-2.5">
+            <button onClick={reset} className="px-4 py-2.5 text-slate-600 hover:text-slate-900">
               Recommencer
             </button>
             {hasEmptyCode && (
@@ -257,11 +305,11 @@ export default function SchemaImport() {
       )}
 
       {step === 'done' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
-          <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-3 py-2">
-            {result?.message ?? 'Import terminé.'}
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            ✓ {result?.message ?? 'Import terminé.'}
           </div>
-          <ul className="text-sm text-slate-700 space-y-1">
+          <ul className="space-y-1 text-sm text-slate-700">
             {result?.conveyors?.map((c) => (
               <li key={c.code} className="flex items-center gap-2">
                 <span className="font-mono font-medium text-slate-800">{c.code}</span>
@@ -271,10 +319,10 @@ export default function SchemaImport() {
             ))}
           </ul>
           <div className="flex items-center gap-3 pt-1">
-            <button onClick={reset} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg">
+            <button onClick={reset} className="rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:from-emerald-800 hover:to-teal-700">
               Importer un autre fichier
             </button>
-            <Link to="/app" className="text-slate-600 hover:text-slate-900 px-4 py-2.5">
+            <Link to="/app" className="px-4 py-2.5 text-slate-600 hover:text-slate-900">
               Voir le schéma
             </Link>
           </div>
@@ -288,7 +336,7 @@ function Step({ n, label, active, done }) {
   return (
     <li className="flex items-center gap-2">
       <span
-        className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+        className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
           active
             ? 'bg-emerald-600 text-white'
             : done
@@ -296,9 +344,13 @@ function Step({ n, label, active, done }) {
             : 'bg-slate-100 text-slate-400'
         }`}
       >
-        {n}
+        {done ? '✓' : n}
       </span>
       <span className={active ? 'font-medium text-slate-800' : 'text-slate-500'}>{label}</span>
     </li>
   )
+}
+
+function Connector({ done }) {
+  return <span aria-hidden className={`h-px w-6 sm:w-10 ${done ? 'bg-emerald-300' : 'bg-slate-200'}`} />
 }

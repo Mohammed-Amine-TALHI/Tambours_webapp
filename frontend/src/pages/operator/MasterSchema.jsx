@@ -17,6 +17,13 @@ export default function MasterSchema() {
   return (
     <OperatorShell>
       <div className="space-y-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Schéma des installations</h1>
+          <p className="text-sm text-slate-500">
+            Cliquez sur une zone du plan ou choisissez un convoyeur dans la liste pour ouvrir sa fiche.
+          </p>
+        </div>
+
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex flex-col items-start gap-3 lg:flex-row">

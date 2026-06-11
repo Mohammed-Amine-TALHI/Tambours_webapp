@@ -35,12 +35,16 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <div className="auth-bg flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-emerald-900/10">
         {/* Header band */}
-        <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 px-8 py-7 text-white">
-          <div className="flex items-center gap-3">
-            <div className="h-14 w-14 rounded-xl bg-white flex items-center justify-center p-1 shrink-0">
+        <div className="relative bg-gradient-to-br from-emerald-700 via-emerald-700 to-teal-700 px-8 py-7 text-white">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-10"
+            style={{ backgroundImage: 'repeating-linear-gradient(135deg, #fff 0 1px, transparent 1px 14px)' }}
+          />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white p-1">
               <img src="/ocp-logo.png" alt="OCP" className="h-full w-auto object-contain" />
             </div>
             <div>
@@ -109,7 +113,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 transition-colors"
+            className="w-full rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 py-2.5 font-semibold text-white shadow-sm transition hover:from-emerald-800 hover:to-teal-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? 'Connexion en cours…' : 'Se connecter'}
           </button>

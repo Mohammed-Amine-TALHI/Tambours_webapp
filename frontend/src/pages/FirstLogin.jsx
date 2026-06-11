@@ -63,13 +63,19 @@ export default function FirstLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10 flex items-center justify-center">
-      <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 px-8 py-6 text-white">
-          <h1 className="text-xl font-semibold">Changement de mot de passe requis</h1>
-          <p className="text-sm text-emerald-50/90 mt-1">
-            Bienvenue {user?.first_name}. Vous devez définir un nouveau mot de passe avant de continuer.
-          </p>
+    <div className="auth-bg flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-emerald-900/10">
+        <div className="relative bg-gradient-to-br from-emerald-700 via-emerald-700 to-teal-700 px-8 py-6 text-white">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-10"
+            style={{ backgroundImage: 'repeating-linear-gradient(135deg, #fff 0 1px, transparent 1px 14px)' }}
+          />
+          <div className="relative">
+            <h1 className="text-xl font-semibold">Changement de mot de passe requis</h1>
+            <p className="text-sm text-emerald-50/90 mt-1">
+              Bienvenue {user?.first_name}. Vous devez définir un nouveau mot de passe avant de continuer.
+            </p>
+          </div>
         </div>
 
         <form onSubmit={onSubmit} className="px-8 py-7 space-y-5">

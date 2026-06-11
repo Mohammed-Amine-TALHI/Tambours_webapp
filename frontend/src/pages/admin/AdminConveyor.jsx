@@ -5,6 +5,7 @@ import {
   uploadDatasheet, deleteDatasheet, KIND_LABEL,
 } from '../../lib/schemaApi'
 import Spinner from '../../components/Spinner'
+import { SectionTitle } from '../../components/fiche'
 
 const S = 1000
 const DEFAULT_R = 0.03
@@ -24,12 +25,26 @@ export default function AdminConveyor() {
   if (!conveyor) return <div className="flex items-center gap-3 text-slate-500 text-sm py-16 justify-center"><Spinner /> Chargement…</div>
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link to="/admin/design" className="text-sm text-slate-500 hover:text-slate-700">← Design du schéma</Link>
-        <h1 className="text-2xl font-semibold text-slate-800 mt-1">
-          {conveyor.code} <span className="text-slate-400 font-normal text-lg">· {conveyor.drums.length} tambour(s)</span>
-        </h1>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Link to="/admin/design" className="text-sm text-slate-500 hover:text-emerald-700">← Design du schéma</Link>
+          <div className="mt-1 flex items-center gap-3">
+            <span className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-emerald-600 px-2.5 font-mono text-base font-black text-white">
+              {conveyor.code}
+            </span>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {conveyor.name || conveyor.code}
+              <span className="ml-2 text-lg font-normal text-slate-400">· {conveyor.drums.length} tambour(s)</span>
+            </h1>
+          </div>
+        </div>
+        <Link
+          to={`/app/conveyors/${conveyor.id}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+        >
+          Voir côté opérateur →
+        </Link>
       </div>
 
       <InfoEditor conveyor={conveyor} onSaved={(c) => setConveyor((cur) => ({ ...cur, ...c }))} />
@@ -37,7 +52,7 @@ export default function AdminConveyor() {
       <DrumMarkerDesigner key={conveyor.id} conveyor={conveyor} />
 
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-slate-700">Tambours, composants & fiches techniques</h2>
+        <SectionTitle no="03">Tambours, composants & fiches techniques</SectionTitle>
         {conveyor.drums.map((d) => (
           <DrumEditor key={d.id} drum={d} />
         ))}
@@ -79,40 +94,48 @@ function InfoEditor({ conveyor, onSaved }) {
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+    <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-700">Informations du convoyeur</h2>
-        {saved && <span className="text-xs text-emerald-600">Validé ✓</span>}
+        <SectionTitle no="01">Informations du convoyeur</SectionTitle>
+        {saved && <span className="mb-3 shrink-0 text-xs text-emerald-600">Validé ✓</span>}
       </div>
       {err && <p className="text-xs text-red-600">{err}</p>}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="space-y-1">
           <span className="block text-sm font-medium text-slate-700">Nom</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder={conveyor.inst_label || ''} />
+          <input value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder={conveyor.inst_label || 'ex : Convoyeur principal'} />
         </label>
         <label className="space-y-1">
           <span className="block text-sm font-medium text-slate-700">Famille</span>
-          <input value={family} onChange={(e) => setFamily(e.target.value.toUpperCase())} className="input font-mono uppercase" />
+          <input value={family} onChange={(e) => setFamily(e.target.value.toUpperCase())} className="input font-mono uppercase" placeholder="ex : T" />
         </label>
       </div>
 
       <div className="space-y-2">
         <span className="block text-sm font-medium text-slate-700">Caractéristiques</span>
+        {chars.length === 0 && (
+          <p className="text-xs text-slate-400">
+            Aucune caractéristique — ajoutez par exemple « Débit », « Vitesse », « Longueur »…
+          </p>
+        )}
         {chars.map((c, i) => (
           <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2">
             <input value={c.key} onChange={(e) => setChar(i, { key: e.target.value })} placeholder="Libellé (ex : Débit)" className="input text-sm" />
             <input value={c.value} onChange={(e) => setChar(i, { value: e.target.value })} placeholder="Valeur (ex : 1000 t/h)" className="input text-sm" />
-            <button onClick={() => setChars((cs) => cs.filter((_, idx) => idx !== i))} className="text-slate-400 hover:text-red-600 px-2" title="Supprimer">✕</button>
+            <button onClick={() => setChars((cs) => cs.filter((_, idx) => idx !== i))} className="px-2 text-slate-400 hover:text-red-600" title="Supprimer">✕</button>
           </div>
         ))}
-        <button onClick={() => setChars((cs) => [...cs, { key: '', value: '' }])} className="text-xs text-emerald-700 hover:underline">
+        <button
+          onClick={() => setChars((cs) => [...cs, { key: '', value: '' }])}
+          className="w-full rounded-lg border border-dashed border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+        >
           + Ajouter une caractéristique
         </button>
       </div>
 
       <button onClick={save} disabled={saving}
-        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium px-5 py-2.5 rounded-lg inline-flex items-center justify-center min-w-40">
+        className="inline-flex min-w-40 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:from-emerald-800 hover:to-teal-700 disabled:opacity-50">
         {saving ? <Spinner variant="onColor" /> : 'Valider les infos'}
       </button>
     </div>
@@ -142,30 +165,30 @@ function DrumEditor({ drum }) {
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-50 text-left">
-        <span className="h-8 w-8 shrink-0 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-semibold">{drum.numero}</span>
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-slate-50">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-sm font-semibold text-white">{drum.numero}</span>
         <span className="flex-1 text-sm font-medium text-slate-800">
           Tambour {drum.numero}
-          {drum.diametre && <span className="text-slate-400 font-normal"> · Ø{drum.diametre}</span>}
+          {drum.diametre && <span className="font-normal text-slate-400"> · Ø{drum.diametre}</span>}
         </span>
-        <span className="text-slate-300">{open ? '▾' : '▸'}</span>
+        <span className={`text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden>▸</span>
       </button>
 
       {open && (
-        <div className="px-5 pb-5 space-y-5 border-t border-slate-100">
+        <div className="space-y-5 border-t border-slate-100 px-5 pb-5">
           {/* drum fields */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-4">
-            <Field label="Diamètre"><input value={form.diametre} onChange={(e) => upd('diametre', e.target.value)} className="input text-sm" /></Field>
-            <Field label="Longueur"><input value={form.longueur} onChange={(e) => upd('longueur', e.target.value)} className="input text-sm" /></Field>
-            <Field label="État"><input value={form.etat} onChange={(e) => upd('etat', e.target.value)} className="input text-sm" /></Field>
-            <Field label="Dynano bloc"><input value={form.liaison_dynano} onChange={(e) => upd('liaison_dynano', e.target.value)} className="input text-sm" /></Field>
+          <div className="grid grid-cols-2 gap-3 pt-4 md:grid-cols-3">
+            <Field label="Diamètre"><input value={form.diametre} onChange={(e) => upd('diametre', e.target.value)} placeholder="ex : 1000" className="input text-sm" /></Field>
+            <Field label="Longueur"><input value={form.longueur} onChange={(e) => upd('longueur', e.target.value)} placeholder="ex : 1800" className="input text-sm" /></Field>
+            <Field label="État"><input value={form.etat} onChange={(e) => upd('etat', e.target.value)} placeholder="ex : bon" className="input text-sm" /></Field>
+            <Field label="Dynano bloc"><input value={form.liaison_dynano} onChange={(e) => upd('liaison_dynano', e.target.value)} placeholder="ex : 200/260" className="input text-sm" /></Field>
             <Field label="Anano bloc"><input value={form.liaison_anano} onChange={(e) => upd('liaison_anano', e.target.value)} className="input text-sm" /></Field>
-            <Field label="État liaison"><input value={form.liaison_etat} onChange={(e) => upd('liaison_etat', e.target.value)} className="input text-sm" /></Field>
+            <Field label="État liaison"><input value={form.liaison_etat} onChange={(e) => upd('liaison_etat', e.target.value)} placeholder="ex : disp (Mag)" className="input text-sm" /></Field>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={save} disabled={saving}
-              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg inline-flex items-center justify-center min-w-28">
+              className="inline-flex min-w-28 items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
               {saving ? <Spinner variant="onColor" /> : 'Enregistrer'}
             </button>
             {saved && <span className="text-xs text-emerald-600">Enregistré ✓</span>}
@@ -216,17 +239,17 @@ function DatasheetSection({ title, initial, target }) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-3">
-      <h4 className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">{title}</h4>
+    <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{title}</h4>
 
       {items.length > 0 ? (
         <ul className="space-y-1.5">
           {items.map((ds) => (
-            <li key={ds.id} className="flex items-center gap-2 text-sm bg-white border border-slate-200 rounded-lg px-3 py-2">
-              <span className="text-emerald-600">⬇</span>
+            <li key={ds.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+              <span className="text-emerald-600" aria-hidden>⬇</span>
               <a href={ds.download_url} className="flex-1 truncate text-slate-700 hover:underline">{ds.title}</a>
               {ds.size && <span className="text-xs text-slate-400">{Math.round(ds.size / 1024)} Ko</span>}
-              <button onClick={() => onDelete(ds.id)} className="text-slate-400 hover:text-red-600 text-xs" title="Supprimer">✕</button>
+              <button onClick={() => onDelete(ds.id)} className="text-xs text-slate-400 hover:text-red-600" title="Supprimer">✕</button>
             </li>
           ))}
         </ul>
@@ -239,10 +262,10 @@ function DatasheetSection({ title, initial, target }) {
       <div className="flex flex-wrap items-center gap-2">
         <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-        <input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="Titre (Obligatoire)" className="input text-sm max-w-48" />
+          className="text-xs text-slate-600 file:mr-2 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-emerald-700 hover:file:bg-emerald-100" />
+        <input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="Titre (Obligatoire)" className="input max-w-48 text-sm" />
         <button onClick={onUpload} disabled={!file || busy}
-          className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm px-3 py-2 rounded-lg inline-flex items-center justify-center min-w-24">
+          className="inline-flex min-w-24 items-center justify-center rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-50">
           {busy ? <Spinner variant="onColor" /> : 'Envoyer'}
         </button>
       </div>
@@ -381,20 +404,20 @@ function DrumMarkerDesigner({ conveyor }) {
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-700">Repérage des tambours sur l'image</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+    <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <SectionTitle no="02">Repérage des tambours sur l'image</SectionTitle>
+          <p className="-mt-1 text-xs text-slate-500">
             Sélectionnez un tambour, cliquez sur l'image pour ajouter un repère (plusieurs possibles), glissez pour ajuster.
             Pour un tambour qui apparaît deux fois, utilisez « Dupliquer ce repère ».
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <span className="text-xs text-slate-500">{placedCount}/{drums.length} repéré(s) · {markerCount} repère(s)</span>
           {saved && !dirty.size && <span className="text-xs text-emerald-600">Enregistré ✓</span>}
           <button onClick={save} disabled={saving || !dirty.size}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg inline-flex items-center justify-center min-w-28">
+            className="inline-flex min-w-28 items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
             {saving ? <Spinner variant="onColor" /> : 'Enregistrer les repères'}
           </button>
         </div>
@@ -403,11 +426,11 @@ function DrumMarkerDesigner({ conveyor }) {
       {err && <p className="text-xs text-red-600">{err}</p>}
 
       {!conveyor.image_url ? (
-        <div className="text-sm text-slate-400 py-10 text-center border border-dashed border-slate-200 rounded-lg">
+        <div className="rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400">
           Aucune image pour ce convoyeur.
         </div>
       ) : drums.length === 0 ? (
-        <div className="text-sm text-slate-400 py-10 text-center border border-dashed border-slate-200 rounded-lg">
+        <div className="rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400">
           Aucun tambour à repérer.
         </div>
       ) : (
@@ -423,9 +446,9 @@ function DrumMarkerDesigner({ conveyor }) {
             >
               <img src={conveyor.image_url} alt={`Schéma ${conveyor.code}`}
                 onLoad={(e) => setAspect(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
-                className="w-full h-auto rounded-lg border border-slate-100 bg-white pointer-events-none" draggable={false} />
+                className="pointer-events-none h-auto w-full rounded-lg border border-slate-100 bg-white" draggable={false} />
               {aspect != null && (
-                <svg viewBox={`0 0 ${S * aspect} ${S}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+                <svg viewBox={`0 0 ${S * aspect} ${S}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
                   {drums.flatMap((d) => (markers[d.id] ?? []).map((c, i) => {
                     const sel = d.id === selDrumId && i === selIndex
                     const cx = c.x * S * aspect, cy = c.y * S, r = (c.r || DEFAULT_R) * S
@@ -451,19 +474,19 @@ function DrumMarkerDesigner({ conveyor }) {
             </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-3 space-y-2">
-            <div className="grid grid-cols-4 lg:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+          <div className="col-span-12 space-y-2 lg:col-span-3">
+            <div className="grid max-h-72 grid-cols-4 gap-2 overflow-y-auto pr-1 lg:grid-cols-2">
               {drums.map((d) => {
                 const sel = d.id === selDrumId
                 const count = (markers[d.id] ?? []).length
                 return (
                   <button key={d.id} onClick={() => selectDrum(d.id)}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm border transition ${
-                      sel ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-emerald-300'
+                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
+                      sel ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-emerald-300'
                     }`}>
                     <span className="font-medium">N°{d.numero}</span>
                     {count > 0 ? (
-                      <span className={`text-[11px] font-semibold rounded-full px-1.5 min-w-[20px] text-center ${sel ? 'bg-white text-emerald-700' : 'bg-emerald-100 text-emerald-700'}`}>{count}</span>
+                      <span className={`min-w-[20px] rounded-full px-1.5 text-center text-[11px] font-semibold ${sel ? 'bg-white text-emerald-700' : 'bg-emerald-100 text-emerald-700'}`}>{count}</span>
                     ) : (
                       <span className={`h-2.5 w-2.5 rounded-full ${sel ? 'bg-emerald-200' : 'bg-slate-300'}`} />
                     )}
@@ -477,11 +500,11 @@ function DrumMarkerDesigner({ conveyor }) {
                 {hasSelMarker ? (
                   <>
                     <button onClick={duplicateSelected}
-                      className="w-full text-xs font-medium text-emerald-700 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 rounded-lg px-3 py-2">
+                      className="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
                       + Dupliquer ce repère
                     </button>
                     <button onClick={removeSelected}
-                      className="w-full text-xs text-red-600 border border-red-200 hover:bg-red-50 rounded-lg px-3 py-2">
+                      className="w-full rounded-lg border border-red-200 px-3 py-2 text-xs text-red-600 hover:bg-red-50">
                       Retirer ce repère
                     </button>
                   </>

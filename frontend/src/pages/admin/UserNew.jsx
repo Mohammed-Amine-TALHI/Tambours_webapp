@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api, { ensureCsrf } from '../../lib/api'
 import TempPasswordModal from '../../components/TempPasswordModal'
+import { SectionTitle } from '../../components/fiche'
 
 export default function UserNew() {
   const navigate = useNavigate()
@@ -99,149 +100,170 @@ export default function UserNew() {
 
   const selectedDomain = domains.find((d) => d.id === Number(form.email_domain_id))
   const emailPreview = form.email_local && selectedDomain
-    ? `${form.email_local}@${selectedDomain.domain}` : '—'
+    ? `${form.email_local}@${selectedDomain.domain}` : null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <Link to="/admin/users" className="text-sm text-slate-500 hover:text-slate-700">← Retour</Link>
-        <h1 className="text-2xl font-semibold text-slate-800 mt-1">Nouvel utilisateur</h1>
+        <Link to="/admin/users" className="text-sm text-slate-500 hover:text-emerald-700">← Utilisateurs</Link>
+        <h1 className="mt-1 text-2xl font-bold text-slate-900">Nouvel utilisateur</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Le compte est créé avec un mot de passe temporaire à remettre à l'utilisateur.
+        </p>
       </div>
 
       {generalError && (
-        <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {generalError}
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Prénom" error={errors.first_name}>
-            <input required value={form.first_name} onChange={(e) => update('first_name', e.target.value)} className="input" />
-          </Field>
-          <Field label="Nom" error={errors.last_name}>
-            <input required value={form.last_name} onChange={(e) => update('last_name', e.target.value)} className="input" />
-          </Field>
-        </div>
+      <form onSubmit={onSubmit} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        {/* Identité */}
+        <section>
+          <SectionTitle no="01">Identité</SectionTitle>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Prénom" error={errors.first_name}>
+              <input required value={form.first_name} onChange={(e) => update('first_name', e.target.value)} placeholder="Gabriel" className="input" />
+            </Field>
+            <Field label="Nom" error={errors.last_name}>
+              <input required value={form.last_name} onChange={(e) => update('last_name', e.target.value)} placeholder="Thomas" className="input" />
+            </Field>
+          </div>
+        </section>
 
-        <Field label="Nom d'utilisateur" error={errors.username} hint="Lettres, chiffres, points, tirets — ex: gabriel.thomas">
-          <input
-            required
-            value={form.username}
-            onChange={(e) => update('username', e.target.value.toLowerCase())}
-            placeholder="gabriel.thomas"
-            className="input font-mono"
-          />
-        </Field>
+        {/* Compte */}
+        <section className="space-y-4">
+          <SectionTitle no="02">Compte & accès</SectionTitle>
 
-        <Field label="Email" error={errors.email_local}>
-          <div className="grid grid-cols-[1fr_auto_10rem] w-full">
+          <Field label="Nom d'utilisateur" error={errors.username} hint="Lettres, chiffres, points, tirets — ex : gabriel.thomas">
             <input
               required
-              value={form.email_local}
-              onChange={(e) => update('email_local', e.target.value)}
+              value={form.username}
+              onChange={(e) => update('username', e.target.value.toLowerCase())}
               placeholder="gabriel.thomas"
-              className="input rounded-r-none min-w-0"
+              className="input font-mono"
             />
-            <span className="px-3 flex items-center bg-slate-100 border-y border-slate-300 text-slate-500 text-sm">@</span>
-            <select
-              required
-              value={form.email_domain_id}
-              onChange={(e) => onDomainChange(e.target.value)}
-              className="input rounded-l-none bg-white"
-            >
-              {domains.map((d) => (
-                <option key={d.id} value={d.id}>{d.domain}</option>
-              ))}
-              <option value="__new__">+ Nouveau…</option>
-            </select>
-          </div>
-          <p className="text-xs text-slate-500 pt-1">
-            Aperçu : <span className="font-mono">{emailPreview}</span>
-          </p>
+          </Field>
 
-          {/* Inline new-domain form */}
-          {addingDomain && (
-            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 space-y-2">
-              <p className="text-xs font-medium text-emerald-800">Ajouter un nouveau domaine email</p>
-              {newDomainErr && (
-                <p className="text-xs text-red-600">{newDomainErr}</p>
-              )}
-              <div className="grid grid-cols-5 gap-2">
-                <input
-                  autoFocus
-                  required
-                  value={newDomain.domain}
-                  onChange={(e) => setNewDomain((d) => ({ ...d, domain: e.target.value }))}
-                  placeholder="exemple.com"
-                  className="input col-span-3 font-mono text-sm"
-                  pattern="^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-                  title="Format attendu : exemple.com"
-                />
-                <input
-                  value={newDomain.label}
-                  onChange={(e) => setNewDomain((d) => ({ ...d, label: e.target.value }))}
-                  placeholder="Libellé (facultatif)"
-                  className="input col-span-2 text-sm"
-                />
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={saveDomain}
-                  disabled={savingDomain || !newDomain.domain.trim()}
-                  className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm px-3 py-1.5 rounded-md"
-                >
-                  {savingDomain ? 'Ajout…' : 'Ajouter'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAddingDomain(false); setNewDomain({ domain: '', label: '' }); setNewDomainErr(null) }}
-                  className="text-slate-600 hover:bg-slate-100 text-sm px-3 py-1.5 rounded-md"
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          )}
-        </Field>
-
-        <Field label="Rôle" error={errors.role}>
-          <div className="flex gap-2">
-            {['operateur', 'admin'].map((r) => (
-              <label
-                key={r}
-                className={`flex-1 cursor-pointer rounded-lg border px-3 py-2 text-sm text-center transition ${
-                  form.role === r
-                    ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
-                    : 'border-slate-300 hover:bg-slate-50'
-                }`}
+          <Field label="Email" error={errors.email_local}>
+            <div className="grid w-full grid-cols-[1fr_auto_10rem]">
+              <input
+                required
+                value={form.email_local}
+                onChange={(e) => update('email_local', e.target.value)}
+                placeholder="gabriel.thomas"
+                className="input min-w-0 rounded-r-none"
+              />
+              <span className="flex items-center border-y border-slate-300 bg-slate-100 px-3 text-sm text-slate-500">@</span>
+              <select
+                required
+                value={form.email_domain_id}
+                onChange={(e) => onDomainChange(e.target.value)}
+                className="input rounded-l-none bg-white"
               >
-                <input
-                  type="radio" name="role" value={r}
-                  checked={form.role === r}
-                  onChange={(e) => update('role', e.target.value)}
-                  className="sr-only"
-                />
-                {r === 'admin' ? 'Administrateur' : 'Opérateur'}
-              </label>
-            ))}
-          </div>
-        </Field>
+                {domains.map((d) => (
+                  <option key={d.id} value={d.id}>{d.domain}</option>
+                ))}
+                <option value="__new__">+ Nouveau…</option>
+              </select>
+            </div>
+            {emailPreview && (
+              <p className="pt-1 text-xs text-slate-500">
+                Adresse complète : <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-slate-700">{emailPreview}</span>
+              </p>
+            )}
 
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-800">
-          Un mot de passe temporaire sera généré automatiquement et affiché <strong>une seule fois</strong>.
+            {/* Inline new-domain form */}
+            {addingDomain && (
+              <div className="mt-3 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
+                <p className="text-xs font-medium text-emerald-800">Ajouter un nouveau domaine email</p>
+                {newDomainErr && (
+                  <p className="text-xs text-red-600">{newDomainErr}</p>
+                )}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+                  <input
+                    autoFocus
+                    required
+                    value={newDomain.domain}
+                    onChange={(e) => setNewDomain((d) => ({ ...d, domain: e.target.value }))}
+                    placeholder="exemple.com"
+                    className="input font-mono text-sm sm:col-span-3"
+                    pattern="^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                    title="Format attendu : exemple.com"
+                  />
+                  <input
+                    value={newDomain.label}
+                    onChange={(e) => setNewDomain((d) => ({ ...d, label: e.target.value }))}
+                    placeholder="Libellé (facultatif)"
+                    className="input text-sm sm:col-span-2"
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={saveDomain}
+                    disabled={savingDomain || !newDomain.domain.trim()}
+                    className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {savingDomain ? 'Ajout…' : 'Ajouter'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAddingDomain(false); setNewDomain({ domain: '', label: '' }); setNewDomainErr(null) }}
+                    className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+          </Field>
+
+          <Field label="Rôle" error={errors.role}>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {[
+                { value: 'operateur', title: 'Opérateur', desc: 'Consulte le schéma, les tambours et les fiches.' },
+                { value: 'admin', title: 'Administrateur', desc: 'Gère les données, les imports et les comptes.' },
+              ].map((r) => (
+                <label
+                  key={r.value}
+                  className={`cursor-pointer rounded-xl border px-3.5 py-3 transition ${
+                    form.role === r.value
+                      ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/15'
+                      : 'border-slate-300 hover:border-emerald-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio" name="role" value={r.value}
+                    checked={form.role === r.value}
+                    onChange={(e) => update('role', e.target.value)}
+                    className="sr-only"
+                  />
+                  <span className={`block text-sm font-semibold ${form.role === r.value ? 'text-emerald-800' : 'text-slate-700'}`}>
+                    {r.title}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-slate-500">{r.desc}</span>
+                </label>
+              ))}
+            </div>
+          </Field>
+        </section>
+
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          Un mot de passe temporaire sera généré automatiquement et affiché <strong>une seule fois</strong> —
+          vous pourrez l'imprimer pour le remettre à l'utilisateur.
         </div>
 
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex items-center gap-3 pt-1">
           <button
             type="submit"
             disabled={submitting}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium px-5 py-2.5 rounded-lg"
+            className="rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:from-emerald-800 hover:to-teal-700 disabled:opacity-50"
           >
             {submitting ? 'Création…' : 'Créer l\'utilisateur'}
           </button>
-          <Link to="/admin/users" className="text-slate-600 hover:text-slate-900 px-4 py-2.5">
+          <Link to="/admin/users" className="px-4 py-2.5 text-slate-600 hover:text-slate-900">
             Annuler
           </Link>
         </div>

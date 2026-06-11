@@ -433,9 +433,12 @@ export default function SchemaDesign() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Design du schéma</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Design du schéma</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Choisissez une forme, sélectionnez un convoyeur puis dessinez sa zone. Déplacez, redimensionnez ou faites pivoter les formes. Utilisez le plein écran pour plus d'espace.
+            <span className="font-medium text-emerald-700">1.</span> Sélectionnez un convoyeur ·{' '}
+            <span className="font-medium text-emerald-700">2.</span> Choisissez une forme et dessinez sa zone ·{' '}
+            <span className="font-medium text-emerald-700">3.</span> Enregistrez.
+            Déplacez, redimensionnez ou faites pivoter les formes — le plein écran offre plus d'espace.
           </p>
         </div>
         <div className="flex items-center gap-3">
