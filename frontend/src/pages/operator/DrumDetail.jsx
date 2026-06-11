@@ -38,6 +38,16 @@ export default function DrumDetail() {
     year: 'numeric',
   })
 
+  // Le navigateur nomme le PDF imprimé d'après document.title — utiliser la référence.
+  useEffect(() => {
+    if (!reference) return
+    const previous = document.title
+    document.title = `${reference} — Fiche tambour`
+    return () => {
+      document.title = previous
+    }
+  }, [reference])
+
   // Components flank the central photo zone: even index left, odd index right.
   const leftComponents = (drum?.components ?? []).filter((_, i) => i % 2 === 0)
   const rightComponents = (drum?.components ?? []).filter((_, i) => i % 2 === 1)
@@ -92,7 +102,7 @@ export default function DrumDetail() {
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg font-bold text-slate-900">Tambour {drum.numero}</h2>
-                <p className="truncate text-sm text-slate-500">
+                <p className="truncate text-sm text-slate-500 print:overflow-visible print:whitespace-normal">
                   Convoyeur <span className="font-semibold text-emerald-700">{drum.conveyor?.code ?? '—'}</span>
                   {drum.conveyor?.name && <> — {drum.conveyor.name}</>}
                 </p>
@@ -147,9 +157,9 @@ export default function DrumDetail() {
             </div>
 
             {/* Cartouche de visa — impression uniquement */}
-            <div className="hidden grid-cols-3 gap-3 px-8 pb-5 print:grid">
+            <div className="hidden break-inside-avoid grid-cols-3 gap-3 px-8 pb-5 print:grid">
               {['Émis par', 'Visa opérateur', 'Visa responsable'].map((label) => (
-                <div key={label} className="rounded-lg border border-slate-300 px-3 pb-10 pt-1.5">
+                <div key={label} className="rounded-lg border border-slate-300 px-3 pb-8 pt-1.5">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</span>
                 </div>
               ))}
@@ -251,14 +261,22 @@ function ComponentCard({ component }) {
               <p className="text-xs text-slate-400">Ce composant n'est utilisé qu'ici.</p>
             ) : (
               <>
-                <p className="mb-2 text-xs text-slate-500">
-                  Nomenclature — composant présent dans {loc.count} emplacement(s) :
+                {/* écran : arborescence navigable complète */}
+                <div className="print:hidden">
+                  <p className="mb-2 text-xs text-slate-500">
+                    Nomenclature — composant présent dans {loc.count} emplacement(s) :
+                  </p>
+                  <CrossRefTree
+                    locations={loc.locations ?? []}
+                    currentComponentId={component.id}
+                    onOpenDrum={(drumId) => navigate(`/app/drums/${drumId}`)}
+                  />
+                </div>
+                {/* impression : résumé compact sur une ligne pour tenir sur la fiche */}
+                <p className="hidden text-xs leading-relaxed text-slate-600 print:block">
+                  Présent dans {loc.count} emplacement(s) :{' '}
+                  <span className="font-medium">{compactLocations(loc.locations ?? [])}</span>
                 </p>
-                <CrossRefTree
-                  locations={loc.locations ?? []}
-                  currentComponentId={component.id}
-                  onOpenDrum={(drumId) => navigate(`/app/drums/${drumId}`)}
-                />
               </>
             )}
           </div>
@@ -276,6 +294,22 @@ function ComponentCard({ component }) {
       </div>
     </section>
   )
+}
+
+/** Résumé une-ligne des emplacements pour l'impression : « RP (T3) · T17 (T3, T4, T6) ». */
+function compactLocations(locations) {
+  const byConveyor = new Map()
+  for (const l of locations) {
+    const code = l.conveyor?.code ?? '—'
+    if (!byConveyor.has(code)) byConveyor.set(code, new Set())
+    if (l.drum?.numero != null) byConveyor.get(code).add(l.drum.numero)
+  }
+  return [...byConveyor.entries()]
+    .map(([code, nums]) => {
+      const list = [...nums].sort((a, b) => a - b).map((n) => `T${n}`).join(', ')
+      return list ? `${code} (${list})` : code
+    })
+    .join(' · ')
 }
 
 /* ---------------- cross-reference rendered as a BOM / nomenclature tree ----------------

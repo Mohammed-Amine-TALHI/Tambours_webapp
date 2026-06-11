@@ -88,9 +88,10 @@ export function SectionTitle({ no, children }) {
 
 export function SpecTile({ label, value, mono }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 print:px-2 print:py-1.5">
       <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
-      <div className={`mt-0.5 truncate text-sm font-semibold text-slate-800 ${mono ? 'font-mono' : ''}`}>
+      {/* truncate on screen only — printed fiches must show the full value */}
+      <div className={`mt-0.5 truncate text-sm font-semibold text-slate-800 print:overflow-visible print:whitespace-normal print:text-xs ${mono ? 'font-mono' : ''}`}>
         {value || '—'}
       </div>
     </div>

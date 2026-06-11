@@ -11,10 +11,10 @@ const ZBTN =
   'h-9 w-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white/95 text-lg font-semibold text-slate-700 shadow-sm backdrop-blur hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed'
 
 const TOOLS = [
-  { id: 'select', label: 'Sélection', icon: '↖' },
-  { id: 'rect', label: 'Rectangle', icon: '▭' },
-  { id: 'ellipse', label: 'Cercle', icon: '◯' },
-  { id: 'poly', label: 'Polygone', icon: '⬡' },
+  { id: 'select', label: 'Sélection', Icon: CursorIcon },
+  { id: 'rect', label: 'Rectangle', Icon: RectIcon },
+  { id: 'ellipse', label: 'Cercle', Icon: CircleIcon },
+  { id: 'poly', label: 'Polygone', Icon: PolyIcon },
 ]
 
 export default function SchemaDesign() {
@@ -37,6 +37,7 @@ export default function SchemaDesign() {
   const [scale, setScale] = useState(1) // zoom
   const [tx, setTx] = useState(0)       // pan x (px)
   const [ty, setTy] = useState(0)       // pan y (px)
+  const [filter, setFilter] = useState('') // conveyor list/chips filter
 
   useEffect(() => {
     getMasterSchema()
@@ -54,6 +55,13 @@ export default function SchemaDesign() {
   const master = data?.master
   const selected = conveyors.find((c) => c.id === selectedId) || null
   const placedCount = conveyors.filter((c) => zones[c.id]).length
+
+  const f = filter.trim().toLowerCase()
+  const visibleConveyors = !f
+    ? conveyors
+    : conveyors.filter(
+        (c) => c.code.toLowerCase().includes(f) || (c.name ?? '').toLowerCase().includes(f),
+      )
 
   function markDirty(id) {
     setDirty((d) => new Set(d).add(id))
@@ -237,7 +245,7 @@ export default function SchemaDesign() {
     <button
       onClick={save}
       disabled={saving || dirty.size === 0}
-      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium px-4 py-2 rounded-lg inline-flex items-center justify-center min-w-32"
+      className="inline-flex min-w-32 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-emerald-800 hover:to-teal-700 disabled:opacity-50"
     >
       {saving ? <Spinner variant="onColor" /> : `Enregistrer${dirty.size ? ` (${dirty.size})` : ''}`}
     </button>
@@ -245,26 +253,68 @@ export default function SchemaDesign() {
 
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2">
-      {TOOLS.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => { setTool(t.id); setPolyDraft(null) }}
-          className={`px-3 py-1.5 rounded-lg text-sm border transition inline-flex items-center gap-1.5 ${
-            tool === t.id ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300'
-          }`}
-        >
-          <span aria-hidden>{t.icon}</span> {t.label}
-        </button>
-      ))}
+      <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+        {TOOLS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => { setTool(t.id); setPolyDraft(null) }}
+            title={t.label}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition sm:px-3 ${
+              tool === t.id ? 'bg-emerald-600 font-medium text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <t.Icon className="h-4 w-4" />
+            <span className="hidden sm:inline">{t.label}</span>
+          </button>
+        ))}
+      </div>
       {tool === 'poly' && polyDraft?.length >= 3 && (
-        <button onClick={finishPolygon} className="px-3 py-1.5 rounded-lg text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <button onClick={finishPolygon} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100">
           Terminer le polygone ({polyDraft.length} points)
         </button>
       )}
       {tool !== 'select' && !selectedId && (
-        <span className="text-xs text-amber-600">Sélectionnez d'abord un convoyeur.</span>
+        <span className="text-xs font-medium text-amber-600">Sélectionnez d'abord un convoyeur.</span>
       )}
     </div>
+  )
+
+  const progress = (
+    <div className="flex items-center gap-2.5" title={`${placedCount} zone(s) placée(s) sur ${conveyors.length}`}>
+      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-emerald-500 transition-all"
+          style={{ width: `${conveyors.length ? (placedCount / conveyors.length) * 100 : 0}%` }}
+        />
+      </div>
+      <span className="whitespace-nowrap text-sm font-medium text-slate-600">
+        {placedCount}/{conveyors.length} positionnés
+      </span>
+    </div>
+  )
+
+  const selectedBanner = selected && (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2">
+      <span className="font-mono text-sm font-bold text-emerald-800">{selected.code}</span>
+      <span className="text-xs text-slate-600">
+        {zones[selected.id] ? 'Forme définie — déplacez, redimensionnez ou pivotez.' : 'Choisissez une forme puis dessinez sur le plan.'}
+      </span>
+      {zones[selected.id] && (
+        <button onClick={() => clearZone(selected.id)} className="text-xs font-medium text-red-600 hover:underline">Effacer la forme</button>
+      )}
+      <Link to={`/admin/conveyors/${selected.id}`} className="text-xs font-medium text-emerald-700 hover:underline">
+        Infos &amp; fiches →
+      </Link>
+    </div>
+  )
+
+  const filterInput = (
+    <input
+      value={filter}
+      onChange={(e) => setFilter(e.target.value)}
+      placeholder="Filtrer…"
+      className="w-28 rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+    />
   )
 
   const cursorClass =
@@ -277,7 +327,7 @@ export default function SchemaDesign() {
   const canvas = master?.image_url ? (
     <div
       ref={viewportRef}
-      className={`relative overflow-hidden rounded-lg ${fullscreen ? 'inline-block max-w-full' : 'w-full'}`}
+      className={`relative overflow-hidden rounded-xl ${fullscreen ? 'inline-block max-w-full' : 'w-full'}`}
     >
       <div
         ref={canvasRef}
@@ -292,7 +342,7 @@ export default function SchemaDesign() {
         <img
           src={master.image_url}
           alt="Schéma des installations"
-          className={`rounded-lg border border-slate-100 select-none pointer-events-none ${
+          className={`rounded-xl border border-slate-100 select-none pointer-events-none ${
             fullscreen ? 'block w-auto h-auto max-w-full max-h-[calc(100vh-72px)]' : 'w-full h-auto'
           }`}
           draggable={false}
@@ -338,56 +388,62 @@ export default function SchemaDesign() {
       </div>
     </div>
   ) : (
-    <div className="text-sm text-slate-400 py-16 px-10 text-center border border-dashed border-slate-200 rounded-lg">
+    <div className="rounded-xl border border-dashed border-slate-200 px-10 py-16 text-center text-sm text-slate-400">
       Aucune image de schéma maître.
+      {' '}<Link to="/admin/import" className="text-emerald-600 hover:underline">Importer un fichier</Link>.
     </div>
   )
 
+  // Conveyor chip — shared between the chips bar and the fullscreen panel.
+  function ConveyorChip({ c, vertical }) {
+    const sel = c.id === selectedId
+    const placed = !!zones[c.id]
+    return (
+      <button
+        onClick={() => setSelectedId(c.id)}
+        title={c.name || c.code}
+        className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition ${
+          vertical ? 'w-full justify-between' : ''
+        } ${
+          sel
+            ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+            : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/40'
+        }`}
+      >
+        <span className="font-mono font-semibold">{c.code}</span>
+        {placed ? (
+          <CheckIcon className={`h-3.5 w-3.5 ${sel ? 'text-emerald-100' : 'text-emerald-500'}`} />
+        ) : (
+          <span className={`h-2 w-2 rounded-full ${sel ? 'bg-emerald-200' : 'bg-slate-300'}`} />
+        )}
+      </button>
+    )
+  }
+
   const sidebar = (
     <div className="space-y-3">
-      <div className="text-sm text-slate-600">{placedCount}/{conveyors.length} positionné(s)</div>
-
+      {progress}
       <CharImport />
-
-      {selected && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800 space-y-1">
-          <div className="font-medium">Sélectionné : {selected.code}</div>
-          <div className="text-xs">{zones[selected.id] ? 'Forme définie.' : 'Choisissez une forme puis dessinez.'}</div>
-          <div className="flex items-center gap-3 pt-1">
-            {zones[selected.id] && (
-              <button onClick={() => clearZone(selected.id)} className="text-xs text-red-600 hover:underline">Effacer</button>
-            )}
-            <Link to={`/admin/conveyors/${selected.id}`} className="text-xs text-emerald-700 hover:underline">
-              Infos & fiches →
-            </Link>
-          </div>
-        </div>
-      )}
-
-      <div className={`space-y-1 overflow-y-auto pr-1 ${fullscreen ? 'max-h-[calc(100vh-230px)]' : 'max-h-[55vh]'}`}>
-        {conveyors.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setSelectedId(c.id)}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm border transition ${
-              c.id === selectedId ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-emerald-300'
-            }`}
-          >
-            <span className="font-mono">{c.code}</span>
-            <span className={`h-2.5 w-2.5 rounded-full ${zones[c.id] ? (c.id === selectedId ? 'bg-white' : 'bg-emerald-500') : (c.id === selectedId ? 'bg-emerald-200' : 'bg-slate-300')}`} />
-          </button>
+      {selectedBanner}
+      {filterInput}
+      <div className={`space-y-1 overflow-y-auto pr-1 ${fullscreen ? 'max-h-[calc(100vh-280px)]' : 'max-h-[55vh]'}`}>
+        {visibleConveyors.map((c) => (
+          <ConveyorChip key={c.id} c={c} vertical />
         ))}
         {conveyors.length === 0 && (
           <p className="text-sm text-slate-400">
             Aucun convoyeur. <Link to="/admin/import" className="text-emerald-600 hover:underline">Importer un fichier</Link>.
           </p>
         )}
+        {conveyors.length > 0 && visibleConveyors.length === 0 && (
+          <p className="text-sm text-slate-400">Aucun résultat.</p>
+        )}
       </div>
     </div>
   )
 
   const errorBanner = error && (
-    <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{error}</div>
+    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
   )
   const loadingEl = (
     <div className="flex items-center gap-3 text-slate-500 text-sm py-16 justify-center">
@@ -399,16 +455,16 @@ export default function SchemaDesign() {
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col">
-        <div className="flex flex-wrap items-center gap-2 px-4 py-2 shrink-0 border-b border-slate-200 bg-white">
-          <h1 className="text-base font-semibold text-slate-800 mr-1">Design</h1>
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 shrink-0">
+          <h1 className="mr-1 text-base font-bold text-slate-900">Design du schéma</h1>
           {toolbar}
           <div className="ml-auto flex items-center gap-2">
-            {savedAt && !dirty.size && <span className="text-sm text-emerald-600">Enregistré ✓</span>}
-            <button onClick={() => setPanelOpen((p) => !p)} className="text-sm text-slate-600 hover:text-slate-900 border border-slate-200 px-3 py-2 rounded-lg">
+            {savedAt && !dirty.size && <SavedBadge />}
+            <button onClick={() => setPanelOpen((p) => !p)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900">
               {panelOpen ? 'Masquer le panneau' : 'Afficher le panneau'}
             </button>
             {saveBtn}
-            <button onClick={() => setFullscreen(false)} className="text-sm text-slate-600 hover:text-slate-900 border border-slate-200 px-3 py-2 rounded-lg">
+            <button onClick={() => setFullscreen(false)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900">
               Quitter le plein écran
             </button>
           </div>
@@ -419,7 +475,7 @@ export default function SchemaDesign() {
             {loading ? loadingEl : canvas}
           </section>
           {panelOpen && (
-            <aside className="w-72 shrink-0 border-l border-slate-200 bg-white overflow-y-auto p-3">
+            <aside className="w-72 shrink-0 overflow-y-auto border-l border-slate-200 bg-white p-3">
               {sidebar}
             </aside>
           )}
@@ -434,75 +490,125 @@ export default function SchemaDesign() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Design du schéma</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="mt-1 text-sm text-slate-500">
             <span className="font-medium text-emerald-700">1.</span> Sélectionnez un convoyeur ·{' '}
             <span className="font-medium text-emerald-700">2.</span> Choisissez une forme et dessinez sa zone ·{' '}
             <span className="font-medium text-emerald-700">3.</span> Enregistrez.
-            Déplacez, redimensionnez ou faites pivoter les formes — le plein écran offre plus d'espace.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {savedAt && !dirty.size && <span className="text-sm text-emerald-600">Enregistré ✓</span>}
-          <button onClick={() => setFullscreen(true)} className="text-sm text-slate-600 hover:text-slate-900 border border-slate-200 px-3 py-2 rounded-lg">
+        <div className="flex items-center gap-2">
+          {savedAt && !dirty.size && <SavedBadge />}
+          <button onClick={() => setFullscreen(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900">
+            <ExpandIcon className="h-4 w-4" />
             Plein écran
           </button>
           {saveBtn}
         </div>
       </div>
 
-      {toolbar}
       {errorBanner}
 
       {loading ? loadingEl : (
         <div className="space-y-4">
-          {/* control bar — status, characteristics import, conveyor chips, selected actions */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-3 space-y-3">
+          {/* control bar — tools, progress, characteristics import, conveyor chips */}
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="text-sm font-medium text-slate-600">{placedCount}/{conveyors.length} positionné(s)</span>
-              <CharImport />
-              {selected && (
-                <div className="flex flex-wrap items-center gap-3 ml-auto">
-                  <span className="text-sm font-medium text-emerald-800">Sélectionné : {selected.code}</span>
-                  <span className="text-xs text-slate-500">
-                    {zones[selected.id] ? 'Forme définie.' : 'Choisissez une forme puis dessinez.'}
-                  </span>
-                  {zones[selected.id] && (
-                    <button onClick={() => clearZone(selected.id)} className="text-xs text-red-600 hover:underline">Effacer</button>
-                  )}
-                  <Link to={`/admin/conveyors/${selected.id}`} className="text-xs text-emerald-700 hover:underline">Infos &amp; fiches →</Link>
-                </div>
-              )}
+              {toolbar}
+              <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
+                {progress}
+                <CharImport />
+              </div>
             </div>
+
+            {selectedBanner}
 
             {conveyors.length === 0 ? (
               <p className="text-sm text-slate-400">
                 Aucun convoyeur. <Link to="/admin/import" className="text-emerald-600 hover:underline">Importer un fichier</Link>.
               </p>
             ) : (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {conveyors.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setSelectedId(c.id)}
-                    className={`shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border transition ${
-                      c.id === selectedId ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-emerald-300'
-                    }`}
-                  >
-                    <span className="font-mono">{c.code}</span>
-                    <span className={`h-2 w-2 rounded-full ${zones[c.id] ? (c.id === selectedId ? 'bg-white' : 'bg-emerald-500') : (c.id === selectedId ? 'bg-emerald-200' : 'bg-slate-300')}`} />
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                {filterInput}
+                <div className="flex flex-1 gap-1.5 overflow-x-auto pb-1">
+                  {visibleConveyors.map((c) => (
+                    <ConveyorChip key={c.id} c={c} />
+                  ))}
+                  {visibleConveyors.length === 0 && (
+                    <span className="py-1.5 text-sm text-slate-400">Aucun résultat.</span>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
           {/* full-width canvas */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3">
             {canvas}
           </div>
         </div>
       )}
     </div>
+  )
+}
+
+function SavedBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+      <CheckIcon className="h-3.5 w-3.5" /> Enregistré
+    </span>
+  )
+}
+
+/* ---------------- icons ---------------- */
+
+function CursorIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m5 3 7.5 17 2.2-6.8L21.5 11Z" />
+    </svg>
+  )
+}
+
+function RectIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="6" width="17" height="12" rx="1.5" />
+    </svg>
+  )
+}
+
+function CircleIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="8.5" />
+    </svg>
+  )
+}
+
+function PolyIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3 21 10l-3.5 10h-11L3 10Z" />
+    </svg>
+  )
+}
+
+function CheckIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m4.5 12.5 5 5 10-11" />
+    </svg>
+  )
+}
+
+function ExpandIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h6v6" />
+      <path d="M9 21H3v-6" />
+      <path d="m21 3-7 7" />
+      <path d="m3 21 7-7" />
+    </svg>
   )
 }
 
@@ -537,7 +643,7 @@ function CharImport() {
         onClick={() => inputRef.current?.click()}
         disabled={busy}
         title="Remplir les caractéristiques des convoyeurs détectés depuis un fichier Excel"
-        className="text-sm border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-700 px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 disabled:opacity-50"
       >
         {busy ? <Spinner /> : <span aria-hidden>⬆</span>}
         Caractéristiques (Excel)

@@ -45,6 +45,16 @@ export default function ConveyorView() {
   })
   const characteristics = Object.entries(conveyor?.characteristics ?? {})
 
+  // Le navigateur nomme le PDF imprimé d'après document.title — utiliser la référence.
+  useEffect(() => {
+    if (!reference) return
+    const previous = document.title
+    document.title = `${reference} — Fiche convoyeur`
+    return () => {
+      document.title = previous
+    }
+  }, [reference])
+
   return (
     <OperatorShell
       breadcrumb={
@@ -120,14 +130,16 @@ export default function ConveyorView() {
               {/* 02 — Tambours */}
               <section>
                 <SectionTitle no="02">Tambours ({drums.length})</SectionTitle>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 print:gap-2">
+
+                {/* écran : cartes cliquables synchronisées avec le schéma */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 print:hidden">
                   {drums.map((d) => (
                     <button
                       key={d.id}
                       onMouseEnter={() => setHovered(d.id)}
                       onMouseLeave={() => setHovered(null)}
                       onClick={() => openDrum(d)}
-                      className={`flex items-center gap-3 break-inside-avoid rounded-2xl border px-3 py-2.5 text-left transition ${
+                      className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition ${
                         hovered === d.id
                           ? 'border-emerald-400 bg-emerald-50'
                           : 'border-slate-200 bg-white hover:border-emerald-300'
@@ -146,13 +158,44 @@ export default function ConveyorView() {
                         </span>
                       </span>
                       {d.etat && <EtatBadge etat={d.etat} />}
-                      <span className="text-slate-300 print:hidden" aria-hidden>→</span>
+                      <span className="text-slate-300" aria-hidden>→</span>
                     </button>
                   ))}
                   {drums.length === 0 && (
                     <p className="text-sm text-slate-400">Aucun tambour.</p>
                   )}
                 </div>
+
+                {/* impression : tableau complet — aucune donnée tronquée */}
+                <table className="hidden w-full border-collapse text-xs print:table">
+                  <thead>
+                    <tr className="border-b-2 border-emerald-600 text-left text-[10px] uppercase tracking-wider text-slate-500">
+                      <th className="py-1.5 pr-2 font-semibold">N°</th>
+                      <th className="py-1.5 pr-2 font-semibold">Diamètre</th>
+                      <th className="py-1.5 pr-2 font-semibold">Longueur</th>
+                      <th className="py-1.5 pr-2 font-semibold">État</th>
+                      <th className="py-1.5 font-semibold">Composants</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drums.map((d) => (
+                      <tr key={d.id} className="break-inside-avoid border-b border-slate-200 align-top">
+                        <td className="py-1.5 pr-2 font-bold text-emerald-700">{d.numero}</td>
+                        <td className="py-1.5 pr-2">{d.diametre ? `Ø ${d.diametre}` : '—'}</td>
+                        <td className="py-1.5 pr-2">{d.longueur ? `L ${d.longueur}` : '—'}</td>
+                        <td className="py-1.5 pr-2">{d.etat || '—'}</td>
+                        <td className="py-1.5 text-slate-600">
+                          {(d.components ?? [])
+                            .map((c) => c.type_label || c.kind)
+                            .join(' · ') || '—'}
+                        </td>
+                      </tr>
+                    ))}
+                    {drums.length === 0 && (
+                      <tr><td colSpan={5} className="py-2 text-slate-400">Aucun tambour.</td></tr>
+                    )}
+                  </tbody>
+                </table>
               </section>
 
               {/* 03 — Caractéristiques */}
