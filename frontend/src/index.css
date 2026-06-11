@@ -9,17 +9,21 @@
 
 body {
   margin: 0;
-  background: #f8fafc; 
-  color: #0f172a;     
+  background: #f8fafc;
+  color: #0f172a;
 }
 
 #root {
   min-height: 100vh;
 }
 
+::selection {
+  background: rgba(16, 185, 129, 0.22);
+}
+
 .input {
   width: 100%;
-  border: 1px solid #cbd5e1;       
+  border: 1px solid #cbd5e1;
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
@@ -29,6 +33,24 @@ body {
 }
 .input:focus {
   outline: none;
-  border-color: #059669;            
+  border-color: #059669;
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* ---------- print (fiche technique) ---------- */
+@page {
+  size: A4;
+  margin: 10mm 9mm 12mm;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  /* keep the emerald header band and badges in the printed fiche */
+  .print-sheet,
+  .print-sheet * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
