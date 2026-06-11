@@ -17,6 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trust the platform load balancer / Vercel proxy so Laravel reads
+        // X-Forwarded-Proto and knows the request is HTTPS. Without this,
+        // SESSION_SECURE_COOKIE cookies are never set behind a PaaS proxy and
+        // login silently fails in production.
+        $middleware->trustProxies(at: '*');
+
         // Sanctum SPA: ensures cookie + CSRF auth works for our React frontend
         $middleware->statefulApi();
 

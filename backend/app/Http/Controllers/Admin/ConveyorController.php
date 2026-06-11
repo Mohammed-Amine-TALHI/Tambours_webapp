@@ -39,14 +39,16 @@ class ConveyorController extends Controller
             'family'               => ['sometimes', 'nullable', 'string', 'max:60'],
             'characteristics'      => ['sometimes', 'nullable', 'array'],
 
-            'master_zone'          => ['sometimes', 'nullable', 'array'],
-            'master_zone.type'     => ['required_with:master_zone', 'in:rect,ellipse,poly'],
-            'master_zone.x'        => ['nullable', 'numeric', 'between:0,1'],
-            'master_zone.y'        => ['nullable', 'numeric', 'between:0,1'],
-            'master_zone.w'        => ['nullable', 'numeric', 'between:0,1'],
-            'master_zone.h'        => ['nullable', 'numeric', 'between:0,1'],
-            'master_zone.angle'    => ['nullable', 'numeric', 'between:-360,360'],
-            'master_zone.points'   => ['nullable', 'array'],
+            'master_zone'             => ['sometimes', 'nullable', 'array'],
+            'master_zone.type'        => ['required_with:master_zone', 'in:rect,ellipse,poly'],
+            'master_zone.x'           => ['nullable', 'numeric', 'between:0,1'],
+            'master_zone.y'           => ['nullable', 'numeric', 'between:0,1'],
+            'master_zone.w'           => ['nullable', 'numeric', 'between:0,1'],
+            'master_zone.h'           => ['nullable', 'numeric', 'between:0,1'],
+            'master_zone.angle'       => ['nullable', 'numeric', 'between:-360,360'],
+            'master_zone.points'      => ['nullable', 'array'],
+            'master_zone.labelOff'    => ['nullable', 'array', 'size:2'],
+            'master_zone.labelOff.*'  => ['nullable', 'numeric'],
         ]);
 
         $payload = [];

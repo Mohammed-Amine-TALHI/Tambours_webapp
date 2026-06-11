@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* OCP-inspired theme tokens */
 :root {
   color-scheme: light;
   font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -10,18 +9,17 @@
 
 body {
   margin: 0;
-  background: #f8fafc; /* slate-50 */
-  color: #0f172a;      /* slate-900 */
+  background: #f8fafc; 
+  color: #0f172a;     
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* Shared input utility used by admin forms */
 .input {
   width: 100%;
-  border: 1px solid #cbd5e1;        /* slate-300 */
+  border: 1px solid #cbd5e1;       
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
@@ -31,6 +29,6 @@ body {
 }
 .input:focus {
   outline: none;
-  border-color: #059669;            /* emerald-600 */
+  border-color: #059669;            
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }

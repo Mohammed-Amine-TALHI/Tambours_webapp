@@ -20,28 +20,31 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'username' => ['required', 'string'],
+            'login'    => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('username', $validated['username'])->first();
+        $identifier = $validated['login'];
+        $user = str_contains($identifier, '@')
+            ? User::where('email', $identifier)->first()
+            : User::where('username', $identifier)->first();
 
         // Generic message to avoid user enumeration
         if (! $user) {
             throw ValidationException::withMessages([
-                'username' => ['Invalid credentials.'],
+                'login' => ['Invalid credentials.'],
             ]);
         }
 
         if (! $user->is_active) {
             throw ValidationException::withMessages([
-                'username' => ['Your account is disabled. Contact an administrator.'],
+                'login' => ['Your account is disabled. Contact an administrator.'],
             ]);
         }
 
         if ($user->isLocked()) {
             throw ValidationException::withMessages([
-                'username' => ['Account locked. Try again later.'],
+                'login' => ['Account locked. Try again later.'],
             ]);
         }
 
@@ -59,7 +62,7 @@ class AuthController extends Controller
             }
 
             throw ValidationException::withMessages([
-                'username' => ['Invalid credentials.'],
+                'login' => ['Invalid credentials.'],
             ]);
         }
 

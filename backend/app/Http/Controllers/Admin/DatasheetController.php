@@ -30,7 +30,7 @@ class DatasheetController extends Controller
         $ds = Datasheet::create([
             'component_id'  => $validated['component_id'] ?? null,
             'drum_id'       => $validated['drum_id'] ?? null,
-            'title'         => $validated['title']
+            'title'         => ($validated['title'] ?? null)
                 ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
             'original_name' => $file->getClientOriginalName(),
             'file_path'     => $path,

@@ -6,7 +6,7 @@ export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
 
-  const [username, setUsername] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
@@ -17,7 +17,7 @@ export default function Login() {
     setError(null)
     setSubmitting(true)
     try {
-      const user = await login(username.trim(), password)
+      const user = await login(identifier.trim(), password)
       if (user.must_change_password) {
         navigate('/first-login', { replace: true })
       } else {
@@ -25,7 +25,7 @@ export default function Login() {
       }
     } catch (err) {
       const msg =
-        err?.response?.data?.errors?.username?.[0] ??
+        err?.response?.data?.errors?.login?.[0] ??
         err?.response?.data?.message ??
         'Connexion impossible. Veuillez réessayer.'
       setError(msg)
@@ -40,11 +40,8 @@ export default function Login() {
         {/* Header band */}
         <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 px-8 py-7 text-white">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3 12 L21 12 M12 3 C15 6 15 18 12 21 C9 18 9 6 12 3" />
-              </svg>
+            <div className="h-14 w-14 rounded-xl bg-white flex items-center justify-center p-1 shrink-0">
+              <img src="/ocp-logo.png" alt="OCP" className="h-full w-auto object-contain" />
             </div>
             <div>
               <h1 className="text-xl font-semibold">Plateforme Tambours</h1>
@@ -70,17 +67,17 @@ export default function Login() {
 
           <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-700">
-              Nom d'utilisateur
+              Nom d'utilisateur ou adresse e-mail
             </label>
             <input
               type="text"
               autoComplete="username"
               autoFocus
               required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-              placeholder="gabriel.thomas"
+              placeholder="gabriel.thomas ou gabriel@example.com"
             />
           </div>
 

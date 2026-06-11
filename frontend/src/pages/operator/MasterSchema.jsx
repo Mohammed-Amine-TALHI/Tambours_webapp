@@ -19,19 +19,118 @@ export default function MasterSchema() {
       <div className="space-y-3">
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
-        {data?.master?.image_url ? (
-          <ZoomableSchema
-            imageUrl={data.master.image_url}
+        <div className="flex flex-col items-start gap-3 lg:flex-row">
+          <ConveyorPanel
             conveyors={conveyors}
-            onOpen={(c) => navigate(`/app/conveyors/${c.id}`)}
+            onSelect={(c) => navigate(`/app/conveyors/${c.id}`)}
           />
-        ) : !error ? (
-          <div className="text-sm text-slate-400 py-10 text-center border border-dashed border-slate-200 rounded-lg">
-            Aucune image de schéma maître chargée.
+
+          <div className="w-full min-w-0 flex-1">
+            {data?.master?.image_url ? (
+              <ZoomableSchema
+                imageUrl={data.master.image_url}
+                conveyors={conveyors}
+                onOpen={(c) => navigate(`/app/conveyors/${c.id}`)}
+              />
+            ) : !error ? (
+              <div className="text-sm text-slate-400 py-10 text-center border border-dashed border-slate-200 rounded-lg">
+                Aucune image de schéma maître chargée.
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
     </OperatorShell>
+  )
+}
+
+/** Natural sort so B2 < B10 and T8 < T8bis < T9. */
+function naturalCompare(a, b) {
+  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' })
+}
+
+/**
+ * Side panel listing every conveyor (grouped by family) for direct selection.
+ * Complements the clickable master image and reaches conveyors that have no
+ * drawn zone, which aren't clickable on the schema.
+ */
+function ConveyorPanel({ conveyors, onSelect }) {
+  const [filter, setFilter] = useState('')
+  const f = filter.trim().toLowerCase()
+
+  const groups = useMemo(() => {
+    const list = conveyors
+      .filter(
+        (c) =>
+          !f ||
+          c.code.toLowerCase().includes(f) ||
+          (c.name ?? '').toLowerCase().includes(f),
+      )
+      .slice()
+      .sort((a, b) => naturalCompare(a.code, b.code))
+
+    const byFamily = new Map()
+    for (const c of list) {
+      const key = c.family || 'Autres'
+      if (!byFamily.has(key)) byFamily.set(key, [])
+      byFamily.get(key).push(c)
+    }
+    return [...byFamily.entries()].sort(([a], [b]) => naturalCompare(a, b))
+  }, [conveyors, f])
+
+  return (
+    <aside className="w-full lg:w-72 lg:shrink-0">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-4 py-3">
+          <h2 className="font-semibold text-slate-800">Convoyeurs</h2>
+          <p className="text-xs text-slate-400">
+            {conveyors.length} installation{conveyors.length > 1 ? 's' : ''}
+          </p>
+        </div>
+
+        <div className="p-2">
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filtrer…"
+            className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+          />
+        </div>
+
+        <div className="max-h-[55vh] space-y-2 overflow-y-auto px-2 pb-2 lg:max-h-[calc(100vh-13rem)]">
+          {groups.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-slate-400">Aucun convoyeur.</p>
+          ) : (
+            groups.map(([family, items]) => (
+              <div key={family}>
+                <div className="px-2 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  {family}
+                </div>
+                <div className="space-y-0.5">
+                  {items.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => onSelect(c)}
+                      title={c.name || c.code}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-emerald-50"
+                    >
+                      <span className="font-mono text-sm font-semibold text-slate-700">{c.code}</span>
+                      {c.name && <span className="truncate text-xs text-slate-400">{c.name}</span>}
+                      <span
+                        className="ml-auto shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500"
+                        title={`${c.drum_count} tambour(s)`}
+                      >
+                        {c.drum_count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </aside>
   )
 }
 
@@ -285,9 +384,10 @@ function Zone({ conveyor, active, dim, onEnter, onLeave, onClick }) {
   const stroke = active ? '#059669' : 'rgba(5,150,105,0.4)'
   const sw = active ? 3 : 1.5
 
-  let shape = null
-  let ax = 0
-  let ay = 0
+  const off = z.labelOff ?? [0, -0.026]
+  let shape
+  let ax
+  let ay
   if (z.type === 'rect' || z.type === 'ellipse') {
     const cx = (z.x + z.w / 2) * S
     const cy = (z.y + z.h / 2) * S
@@ -316,7 +416,7 @@ function Zone({ conveyor, active, dim, onEnter, onLeave, onClick }) {
       onClick={onClick}
     >
       {shape}
-      <ZoneLabel x={ax} y={ay} text={conveyor.code} active={active} />
+      <ZoneLabel x={ax + off[0] * S} y={ay + off[1] * S} text={conveyor.code} active={active} />
     </g>
   )
 }

@@ -4,7 +4,7 @@ import { getMasterSchema, updateConveyorZone, importConveyorCharacteristics } fr
 import Spinner from '../../components/Spinner'
 
 const S = 1000 // viewBox scale; zones are stored as 0..1 fractions
-const MIN = 0.02
+const MIN = 0.005
 const ZMIN = 1 // min zoom
 const ZMAX = 6 // max zoom
 const ZBTN =
@@ -132,6 +132,14 @@ export default function SchemaDesign() {
     const z = op.orig
     const c = centerOf(z)
 
+    if (op.kind === 'move-label') {
+      const dx = p.x - op.start.x
+      const dy = p.y - op.start.y
+      const base = op.orig.labelOff ?? [0, -0.026]
+      setZone(op.cid, { ...op.orig, labelOff: [base[0] + dx, base[1] + dy] })
+      return
+    }
+
     if (op.kind === 'move') {
       const dx = p.x - op.start.x
       const dy = p.y - op.start.y
@@ -156,7 +164,7 @@ export default function SchemaDesign() {
     if (op.kind === 'pan') { setOp(null); return }
     if (op.kind === 'create') {
       const z = zones[selectedId]
-      if (!z || z.w < MIN || z.h < MIN) {
+      if (!z || (z.w < MIN && z.h < MIN)) {
         setZone(selectedId, op.origZone ?? null) // discard stray click
       } else {
         setZone(selectedId, round(z))
@@ -197,6 +205,12 @@ export default function SchemaDesign() {
     e.stopPropagation()
     setSelectedId(cid)
     setOp({ kind, cid, start: pt(e), orig: zones[cid] })
+  }
+  function startLabelMove(e, cid) {
+    if (tool !== 'select') return
+    e.stopPropagation()
+    setSelectedId(cid)
+    setOp({ kind: 'move-label', cid, start: pt(e), orig: zones[cid] })
   }
 
   function clearZone(id) {
@@ -294,6 +308,7 @@ export default function SchemaDesign() {
                 zone={z}
                 selected={c.id === selectedId}
                 onBodyDown={(e) => startMove(e, c.id)}
+                onLabelDown={(e) => startLabelMove(e, c.id)}
                 onResizeDown={(e) => startHandle(e, c.id, 'resize')}
                 onRotateDown={(e) => startHandle(e, c.id, 'rotate')}
               />
@@ -536,10 +551,11 @@ function CharImport() {
 }
 
 /** A zone shape + (when selected) move/resize/rotate handles, in the 0..1000 viewBox. */
-function ShapeView({ code, zone: z, selected, onBodyDown, onResizeDown, onRotateDown }) {
+function ShapeView({ code, zone: z, selected, onBodyDown, onLabelDown, onResizeDown, onRotateDown }) {
   const fill = selected ? 'rgba(5,150,105,0.30)' : 'rgba(5,150,105,0.12)'
   const stroke = selected ? '#059669' : 'rgba(5,150,105,0.5)'
   const sw = selected ? 3 : 1.5
+  const off = z.labelOff ?? [0, -0.026]
 
   if (z.type === 'poly' && Array.isArray(z.points)) {
     const ax = Math.min(...z.points.map((p) => p[0])) * S
@@ -549,7 +565,7 @@ function ShapeView({ code, zone: z, selected, onBodyDown, onResizeDown, onRotate
         <polygon className="cursor-move" onMouseDown={onBodyDown}
           points={z.points.map(([x, y]) => `${x * S},${y * S}`).join(' ')}
           fill={fill} stroke={stroke} strokeWidth={sw} />
-        <LabelChip x={ax} y={ay} text={code} selected={selected} />
+        <LabelChip x={ax + off[0] * S} y={ay + off[1] * S} text={code} selected={selected} onMouseDown={onLabelDown} />
       </g>
     )
   }
@@ -581,20 +597,23 @@ function ShapeView({ code, zone: z, selected, onBodyDown, onResizeDown, onRotate
           </>
         )}
       </g>
-      {/* upright label box, anchored at the shape's top-left */}
-      <LabelChip x={x} y={y} text={code} selected={selected} />
+      <LabelChip x={x + off[0] * S} y={y + off[1] * S} text={code} selected={selected} onMouseDown={onLabelDown} />
     </g>
   )
 }
 
 /** A filled rounded box + the conveyor code, drawn in the 0..1000 overlay space. */
-function LabelChip({ x, y, text, selected }) {
+function LabelChip({ x, y, text, selected, onMouseDown }) {
   const label = String(text ?? '')
   if (!label) return null
   const w = label.length * 8.5 + 14
   const h = 22
   return (
-    <g style={{ pointerEvents: 'none' }}>
+    <g
+      onMouseDown={onMouseDown}
+      className={onMouseDown ? 'cursor-move' : undefined}
+      style={onMouseDown ? undefined : { pointerEvents: 'none' }}
+    >
       <rect x={x} y={y} width={w} height={h} rx={4}
         fill={selected ? '#059669' : 'rgba(5,150,105,0.88)'} stroke="#ffffff" strokeWidth={1} />
       <text x={x + 7} y={y + h / 2 + 0.5} dominantBaseline="middle"
@@ -627,6 +646,7 @@ function rotate(px, py, cx, cy, deg) {
 }
 function round(z) {
   if (!z) return z
-  if (z.type === 'poly') return { ...z, points: z.points.map(([x, y]) => [round1(x), round1(y)]) }
-  return { ...z, x: round1(clamp(z.x)), y: round1(clamp(z.y)), w: round1(z.w), h: round1(z.h), angle: z.angle || 0 }
+  const off = z.labelOff ? { labelOff: [round1(z.labelOff[0]), round1(z.labelOff[1])] } : {}
+  if (z.type === 'poly') return { ...z, points: z.points.map(([x, y]) => [round1(x), round1(y)]), ...off }
+  return { ...z, x: round1(clamp(z.x)), y: round1(clamp(z.y)), w: round1(z.w), h: round1(z.h), angle: z.angle || 0, ...off }
 }

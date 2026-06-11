@@ -15,9 +15,9 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const login = useCallback(async (username, password) => {
+  const login = useCallback(async (login, password) => {
     await ensureCsrf()
-    const { data } = await api.post('/api/login', { username, password })
+    const { data } = await api.post('/api/login', { login, password })
     setUser(data.user)
     return data.user
   }, [])

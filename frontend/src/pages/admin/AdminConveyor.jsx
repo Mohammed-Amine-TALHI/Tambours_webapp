@@ -240,7 +240,7 @@ function DatasheetSection({ title, initial, target }) {
         <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-        <input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="Titre (facultatif)" className="input text-sm max-w-48" />
+        <input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="Titre (Obligatoire)" className="input text-sm max-w-48" />
         <button onClick={onUpload} disabled={!file || busy}
           className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm px-3 py-2 rounded-lg inline-flex items-center justify-center min-w-24">
           {busy ? <Spinner variant="onColor" /> : 'Envoyer'}

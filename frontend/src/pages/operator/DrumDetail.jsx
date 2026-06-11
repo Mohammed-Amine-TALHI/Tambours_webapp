@@ -9,8 +9,18 @@ export default function DrumDetail() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    setDrum(null)
-    getDrum(id).then(setDrum).catch(() => setError('Tambour introuvable.'))
+    let active = true
+    getDrum(id)
+      .then((d) => {
+        if (active) {
+          setDrum(d)
+          setError(null)
+        }
+      })
+      .catch(() => active && setError('Tambour introuvable.'))
+    return () => {
+      active = false
+    }
   }, [id])
 
   return (
@@ -88,22 +98,21 @@ export default function DrumDetail() {
 }
 
 function ComponentCard({ component }) {
-  const [open, setOpen] = useState(false)
   const [loc, setLoc] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(!!component.plan_key)
   const navigate = useNavigate()
 
-  async function toggleLocations() {
-    if (!open && !loc) {
-      setLoading(true)
-      try {
-        setLoc(await getComponentLocations(component.id))
-      } finally {
-        setLoading(false)
-      }
+  // Auto-load every location this component appears in (no click needed).
+  useEffect(() => {
+    if (!component.plan_key) return
+    let active = true
+    getComponentLocations(component.id)
+      .then((d) => active && setLoc(d))
+      .finally(() => active && setLoading(false))
+    return () => {
+      active = false
     }
-    setOpen((o) => !o)
-  }
+  }, [component.id, component.plan_key])
 
   const others = (loc?.locations ?? []).filter((l) => l.component_id !== component.id)
 
@@ -125,32 +134,25 @@ function ComponentCard({ component }) {
         <Row label="Repère" value={component.repere} />
       </dl>
 
-      {/* Cross-reference */}
+      {/* Cross-reference — every emplacement is listed automatically */}
       {component.plan_key && (
         <div className="mt-4 border-t border-slate-100 pt-3">
-          <button
-            onClick={toggleLocations}
-            className="text-sm text-emerald-700 hover:text-emerald-900 font-medium"
-          >
-            {loading ? 'Recherche…' : open ? 'Masquer les emplacements' : 'Où trouve-t-on ce composant ?'}
-          </button>
-          {open && loc && (
-            <div className="mt-2">
-              {others.length === 0 ? (
-                <p className="text-xs text-slate-400">Ce composant n'est utilisé qu'ici.</p>
-              ) : (
-                <>
-                  <p className="text-xs text-slate-500 mb-2">
-                    Nomenclature — composant présent dans {loc.count} emplacement(s) :
-                  </p>
-                  <CrossRefTree
-                    locations={loc.locations ?? []}
-                    currentComponentId={component.id}
-                    onOpenDrum={(drumId) => navigate(`/app/drums/${drumId}`)}
-                  />
-                </>
-              )}
-            </div>
+          <h4 className="text-xs font-medium text-slate-500 mb-2">Emplacements</h4>
+          {loading ? (
+            <p className="text-xs text-slate-400">Recherche des emplacements…</p>
+          ) : !loc ? null : others.length === 0 ? (
+            <p className="text-xs text-slate-400">Ce composant n'est utilisé qu'ici.</p>
+          ) : (
+            <>
+              <p className="text-xs text-slate-500 mb-2">
+                Nomenclature — composant présent dans {loc.count} emplacement(s) :
+              </p>
+              <CrossRefTree
+                locations={loc.locations ?? []}
+                currentComponentId={component.id}
+                onOpenDrum={(drumId) => navigate(`/app/drums/${drumId}`)}
+              />
+            </>
           )}
         </div>
       )}

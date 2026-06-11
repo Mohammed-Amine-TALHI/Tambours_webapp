@@ -40,6 +40,16 @@ class User extends Authenticatable
     public const LOCKOUT_MINUTES     = 15;
 
     /**
+     * Accounts that cannot be deleted or deactivated by other admins.
+     */
+    public const PROTECTED_USERNAMES = ['Mohammed.TALHI'];
+
+    public function isProtected(): bool
+    {
+        return in_array($this->username, self::PROTECTED_USERNAMES, true);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

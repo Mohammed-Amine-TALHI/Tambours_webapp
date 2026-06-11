@@ -88,6 +88,11 @@ class AdminUserController extends Controller
             'is_active'       => ['sometimes', 'required', 'boolean'],
         ]);
 
+        // Prevent modifications to protected developer accounts
+        if ($user->isProtected() && $user->id !== $request->user()->id) {
+            return response()->json(['message' => 'This account is protected and cannot be modified.'], 422);
+        }
+
         // Prevent an admin from disabling/demoting themselves
         if ($user->id === $request->user()->id) {
             if (array_key_exists('is_active', $validated) && ! $validated['is_active']) {
@@ -138,6 +143,10 @@ class AdminUserController extends Controller
     {
         if ($user->id === $request->user()->id) {
             return response()->json(['message' => 'You cannot delete your own account.'], 422);
+        }
+
+        if ($user->isProtected()) {
+            return response()->json(['message' => 'This account is protected and cannot be deleted.'], 422);
         }
 
         $user->delete();

@@ -5,8 +5,12 @@ import Spinner from '../../components/Spinner'
 
 // Target conveyor codes (operator-facing names). Used for autocomplete suggestions.
 const KNOWN_CODES = [
-  'B0', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7',
-  ...Array.from({ length: 17 }, (_, i) => `T${i + 1}`),
+  // B-series
+  'B0', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B9', 'B10', 'B11', 'B12',
+  // T-series (with sub-variants)
+  'T1', 'T2', 'T3', 'T3a', 'T3b', 'T4', 'T5', 'T6', 'T7', 'T8', 'T8bis',
+  'T9', 'T10', 'T11', 'T12', 'T13', 'T14', 'T14a', 'T14b', 'T15', 'T16', 'T17',
+  // Autres installations
   'RP', 'STACKER',
 ]
 
