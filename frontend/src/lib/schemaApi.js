@@ -72,6 +72,52 @@ export async function getComponentLocations(componentId) {
   return data
 }
 
+// ----- global search -----
+
+export async function searchAll(q) {
+  const { data } = await api.get('/api/search', { params: { q } })
+  return data
+}
+
+// ----- drum photo (admin) -----
+
+export async function uploadDrumPhoto(drumId, file) {
+  await ensureCsrf()
+  const fd = new FormData()
+  fd.append('photo', file)
+  const { data } = await api.post(`/api/admin/drums/${drumId}/photo`, fd)
+  return data.photo_url
+}
+
+export async function deleteDrumPhoto(drumId) {
+  await ensureCsrf()
+  await api.delete(`/api/admin/drums/${drumId}/photo`)
+}
+
+// ----- état vocabulary (admin) -----
+
+export async function getEtats() {
+  const { data } = await api.get('/api/admin/etats')
+  return data.etats
+}
+
+export async function createEtat(fields) {
+  await ensureCsrf()
+  const { data } = await api.post('/api/admin/etats', fields)
+  return data.etat
+}
+
+export async function updateEtat(id, fields) {
+  await ensureCsrf()
+  const { data } = await api.patch(`/api/admin/etats/${id}`, fields)
+  return data.etat
+}
+
+export async function deleteEtat(id) {
+  await ensureCsrf()
+  await api.delete(`/api/admin/etats/${id}`)
+}
+
 export const KIND_LABEL = {
   arbre: 'Arbre',
   virole: 'Virole',

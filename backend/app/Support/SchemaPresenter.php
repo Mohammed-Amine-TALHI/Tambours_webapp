@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Shapes conveyor/drum/component/datasheet models for the frontend.
  * Centralised so operator + admin endpoints stay consistent.
+ *
+ * État fields are reserved for admins: pass $withEtat = false on the
+ * operator-facing endpoints so the values never leave the API.
  */
 class SchemaPresenter
 {
@@ -36,7 +39,7 @@ class SchemaPresenter
         ];
     }
 
-    public static function conveyorDetail(Conveyor $c): array
+    public static function conveyorDetail(Conveyor $c, bool $withEtat = true): array
     {
         return [
             'id'              => $c->id,
@@ -49,50 +52,52 @@ class SchemaPresenter
             'image_width'     => $c->image_width,
             'image_height'    => $c->image_height,
             'master_zone'     => $c->master_zone,
-            'drums'           => $c->drums->map(fn (Drum $d) => self::drumSummary($d))->all(),
+            'drums'           => $c->drums->map(fn (Drum $d) => self::drumSummary($d, $withEtat))->all(),
         ];
     }
 
-    public static function drumSummary(Drum $d): array
+    public static function drumSummary(Drum $d, bool $withEtat = true): array
     {
         return [
             'id'         => $d->id,
             'numero'     => $d->numero,
             'diametre'   => $d->diametre,
             'longueur'   => $d->longueur,
-            'etat'       => $d->etat,
+            'etat'       => $withEtat ? $d->etat : null,
+            'photo_url'  => self::imageUrl($d->photo_path),
             'circles'    => $d->circles ?? [],
             'components'  => $d->relationLoaded('components')
-                ? $d->components->map(fn (Component $cmp) => self::componentSummary($cmp))->all()
+                ? $d->components->map(fn (Component $cmp) => self::componentSummary($cmp, $withEtat))->all()
                 : [],
         ];
     }
 
-    public static function drumDetail(Drum $d): array
+    public static function drumDetail(Drum $d, bool $withEtat = true): array
     {
         return [
             'id'             => $d->id,
             'numero'         => $d->numero,
             'diametre'       => $d->diametre,
             'longueur'       => $d->longueur,
-            'etat'           => $d->etat,
+            'etat'           => $withEtat ? $d->etat : null,
             'liaison_dynano' => $d->liaison_dynano,
             'liaison_anano'  => $d->liaison_anano,
-            'liaison_etat'   => $d->liaison_etat,
+            'liaison_etat'   => $withEtat ? $d->liaison_etat : null,
+            'photo_url'      => self::imageUrl($d->photo_path),
             'circles'        => $d->circles ?? [],
             'conveyor'       => $d->relationLoaded('conveyor') && $d->conveyor ? [
                 'id'   => $d->conveyor->id,
                 'code' => $d->conveyor->code,
                 'name' => $d->conveyor->name,
             ] : null,
-            'components'     => $d->components->map(fn (Component $c) => self::componentDetail($c))->all(),
+            'components'     => $d->components->map(fn (Component $c) => self::componentDetail($c, $withEtat))->all(),
             'datasheets'     => $d->relationLoaded('datasheets')
                 ? $d->datasheets->map(fn (Datasheet $ds) => self::datasheet($ds))->all()
                 : [],
         ];
     }
 
-    public static function componentSummary(Component $c): array
+    public static function componentSummary(Component $c, bool $withEtat = true): array
     {
         return [
             'id'         => $c->id,
@@ -101,13 +106,13 @@ class SchemaPresenter
             'plan_koch'  => $c->plan_koch,
             'plan_key'   => $c->plan_key,
             'repere'     => $c->repere,
-            'etat'       => $c->etat,
+            'etat'       => $withEtat ? $c->etat : null,
         ];
     }
 
-    public static function componentDetail(Component $c): array
+    public static function componentDetail(Component $c, bool $withEtat = true): array
     {
-        return array_merge(self::componentSummary($c), [
+        return array_merge(self::componentSummary($c, $withEtat), [
             'plan_ocp'   => $c->plan_ocp,
             'datasheets' => $c->relationLoaded('datasheets')
                 ? $c->datasheets->map(fn (Datasheet $ds) => self::datasheet($ds))->all()

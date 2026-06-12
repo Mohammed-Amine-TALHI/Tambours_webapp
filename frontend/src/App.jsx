@@ -20,6 +20,7 @@ import UserNew         from './pages/admin/UserNew'
 import SchemaImport    from './pages/admin/SchemaImport'
 import SchemaDesign    from './pages/admin/SchemaDesign'
 import AdminConveyor   from './pages/admin/AdminConveyor'
+import EtatsList       from './pages/admin/EtatsList'
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
             <Route index element={<Navigate to="design" replace />} />
             <Route path="design"        element={<SchemaDesign />} />
             <Route path="conveyors/:id" element={<AdminConveyor />} />
+            <Route path="etats"         element={<EtatsList />} />
             <Route path="users"         element={<UsersList />} />
             <Route path="users/new"     element={<UserNew />} />
             <Route path="import"        element={<SchemaImport />} />

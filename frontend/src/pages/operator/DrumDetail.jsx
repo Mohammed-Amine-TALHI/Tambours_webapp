@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import QRCode from 'qrcode'
 import OperatorShell from './OperatorShell'
+import { useAuth } from '../../auth/AuthContext'
 import { getDrum, getComponentLocations, KIND_LABEL } from '../../lib/schemaApi'
+import { pushRecentDrum } from '../../lib/recent'
 import {
   EtatBadge, FicheFooter, FicheHeader, FloatingPrintButton,
   PrintButton, SectionTitle, SpecTile,
@@ -13,8 +16,11 @@ import {
 
 export default function DrumDetail() {
   const { id } = useParams()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [drum, setDrum] = useState(null)
   const [error, setError] = useState(null)
+  const [qr, setQr] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -23,12 +29,20 @@ export default function DrumDetail() {
         if (active) {
           setDrum(d)
           setError(null)
+          pushRecentDrum({ id: d.id, numero: d.numero, conveyorCode: d.conveyor?.code })
         }
       })
       .catch(() => active && setError('Tambour introuvable.'))
     return () => {
       active = false
     }
+  }, [id])
+
+  // QR imprimé sur la fiche : scanner le papier rouvre la page.
+  useEffect(() => {
+    QRCode.toDataURL(window.location.href, { margin: 0, width: 128 })
+      .then(setQr)
+      .catch(() => setQr(null))
   }, [id])
 
   const reference = drum ? `FT-${drum.conveyor?.code ?? '??'}-T${drum.numero}` : ''
@@ -93,7 +107,7 @@ export default function DrumDetail() {
 
           {/* Fiche technique */}
           <article className="print-sheet overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
-            <FicheHeader title="Fiche technique — Tambour" reference={reference} date={printedOn} />
+            <FicheHeader title="Fiche technique — Tambour" reference={reference} date={printedOn} qr={qr} />
 
             {/* Identité */}
             <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 bg-slate-50/70 px-5 py-4 sm:px-8">
@@ -114,13 +128,20 @@ export default function DrumDetail() {
               {/* 01 — Caractéristiques */}
               <section className="break-inside-avoid">
                 <SectionTitle no="01">Caractéristiques & liaisons</SectionTitle>
-                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6 print:grid-cols-6 print:gap-2">
+                <div
+                  className={`grid grid-cols-2 gap-2.5 print:gap-2 ${
+                    isAdmin
+                      ? 'sm:grid-cols-3 lg:grid-cols-6 print:grid-cols-6'
+                      : 'sm:grid-cols-4 print:grid-cols-4'
+                  }`}
+                >
                   <SpecTile label="Diamètre" value={drum.diametre && `Ø ${drum.diametre}`} />
                   <SpecTile label="Longueur" value={drum.longueur && `L ${drum.longueur}`} />
-                  <SpecTile label="État tambour" value={drum.etat} />
+                  {/* les états sont réservés aux administrateurs */}
+                  {isAdmin && <SpecTile label="État tambour" value={drum.etat} />}
                   <SpecTile label="Liaison dynano" value={drum.liaison_dynano} mono />
                   <SpecTile label="Liaison anano" value={drum.liaison_anano} mono />
-                  <SpecTile label="État liaison" value={drum.liaison_etat} />
+                  {isAdmin && <SpecTile label="État liaison" value={drum.liaison_etat} />}
                 </div>
               </section>
 
@@ -134,7 +155,11 @@ export default function DrumDetail() {
                     ))}
                   </div>
 
-                  <PhotoPlaceholder numero={drum.numero} className="order-1 lg:order-2 print:order-2" />
+                  <PhotoPlaceholder
+                    numero={drum.numero}
+                    photoUrl={drum.photo_url}
+                    className="order-1 lg:order-2 print:order-2"
+                  />
 
                   <div className="order-3 space-y-5 print:space-y-3">
                     {rightComponents.map((c) => (
@@ -175,9 +200,20 @@ export default function DrumDetail() {
   )
 }
 
-/* ---------------- emplacement central réservé à la photo ---------------- */
+/* ---------------- zone centrale : photo du tambour (ou emplacement réservé) ---------------- */
 
-function PhotoPlaceholder({ numero, className = '' }) {
+function PhotoPlaceholder({ numero, photoUrl, className = '' }) {
+  if (photoUrl) {
+    return (
+      <figure className={`mx-auto w-full max-w-[280px] self-start overflow-hidden rounded-2xl border border-slate-200 bg-white print:max-w-none ${className}`}>
+        <img src={photoUrl} alt={`Photo du tambour ${numero}`} className="h-auto w-full object-cover" />
+        <figcaption className="border-t border-slate-100 px-3 py-1.5 text-center text-xs text-slate-500">
+          Tambour {numero}
+        </figcaption>
+      </figure>
+    )
+  }
+
   return (
     <figure
       className={`relative mx-auto flex aspect-[3/4] w-full max-w-[280px] flex-col items-center justify-center self-start rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 px-4 text-center print:max-w-none ${className}`}
@@ -401,6 +437,8 @@ function DatasheetList({ items }) {
         <li key={ds.id} className="break-inside-avoid">
           <a
             href={ds.download_url}
+            target="_blank"
+            rel="noreferrer"
             className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:border-emerald-300 hover:bg-emerald-50"
           >
             <span className="text-emerald-600" aria-hidden>⬇</span>

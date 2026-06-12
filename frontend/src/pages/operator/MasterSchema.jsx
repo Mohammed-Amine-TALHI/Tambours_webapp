@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import OperatorShell from './OperatorShell'
 import { getMasterSchema } from '../../lib/schemaApi'
+import { getRecentDrums } from '../../lib/recent'
 
 export default function MasterSchema() {
   const navigate = useNavigate()
@@ -17,11 +18,14 @@ export default function MasterSchema() {
   return (
     <OperatorShell>
       <div className="space-y-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Schéma des installations</h1>
-          <p className="text-sm text-slate-500">
-            Cliquez sur une zone du plan ou choisissez un convoyeur dans la liste pour ouvrir sa fiche.
-          </p>
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">Schéma des installations</h1>
+            <p className="text-sm text-slate-500">
+              Cliquez sur une zone du plan ou choisissez un convoyeur dans la liste pour ouvrir sa fiche.
+            </p>
+          </div>
+          <RecentDrums onOpen={(d) => navigate(`/app/drums/${d.id}`)} />
         </div>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
@@ -48,6 +52,27 @@ export default function MasterSchema() {
         </div>
       </div>
     </OperatorShell>
+  )
+}
+
+/** Raccourcis vers les derniers tambours consultés (localStorage). */
+function RecentDrums({ onOpen }) {
+  const recent = getRecentDrums()
+  if (recent.length === 0) return null
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Récents</span>
+      {recent.map((d) => (
+        <button
+          key={d.id}
+          onClick={() => onOpen(d)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
+        >
+          <span className="font-mono font-semibold text-emerald-700">{d.conveyorCode ?? '—'}</span>
+          T{d.numero}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -250,6 +275,48 @@ function ZoomableSchema({ imageUrl, conveyors, onOpen }) {
     setGrabbing(false)
   }
 
+  // ---- tactile : double-tap pour zoomer, 1 doigt pour déplacer, pincer pour ajuster ----
+  const touchRef = useRef(null) // { mode:'pan'|'pinch', … }
+
+  function onTouchStart(e) {
+    setShowResults(false)
+    if (e.touches.length === 2) {
+      const [a, b] = e.touches
+      const rect = vpRef.current.getBoundingClientRect()
+      touchRef.current = {
+        mode: 'pinch',
+        d0: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        scale0: scale,
+        cx: (a.clientX + b.clientX) / 2 - rect.left,
+        cy: (a.clientY + b.clientY) / 2 - rect.top,
+      }
+    } else if (e.touches.length === 1 && scale > 1) {
+      touchRef.current = { mode: 'pan', x: e.touches[0].clientX, y: e.touches[0].clientY, tx, ty }
+    }
+  }
+  function onTouchMove(e) {
+    const t = touchRef.current
+    if (!t) return
+    if (t.mode === 'pinch' && e.touches.length === 2) {
+      const [a, b] = e.touches
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+      if (t.d0 > 0) applyZoom((t.scale0 * d) / t.d0, t.cx, t.cy)
+    } else if (t.mode === 'pan' && e.touches.length === 1) {
+      setTx(clampTx(t.tx + e.touches[0].clientX - t.x))
+      setTy(clampTy(t.ty + e.touches[0].clientY - t.y))
+    }
+  }
+  function onTouchEnd() {
+    touchRef.current = null
+  }
+
+  // Double-clic / double-tap : zoom vers le point visé, ou retour à la vue complète.
+  function onDoubleClick(e) {
+    const rect = vpRef.current.getBoundingClientRect()
+    if (scale > 1) resetView()
+    else applyZoom(2.5, e.clientX - rect.left, e.clientY - rect.top)
+  }
+
   function handleOpen(c) {
     if (suppressClickRef.current) return
     onOpen(c)
@@ -263,10 +330,16 @@ function ZoomableSchema({ imageUrl, conveyors, onOpen }) {
         className={`relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-white ${
           scale > 1 ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : ''
         }`}
+        style={{ touchAction: scale > 1 ? 'none' : 'manipulation' }}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={endPan}
         onMouseLeave={endPan}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
+        onDoubleClick={onDoubleClick}
       >
         <div style={{ transform: `translate(${tx}px, ${ty}px) scale(${scale})`, transformOrigin: '0 0' }}>
           <img

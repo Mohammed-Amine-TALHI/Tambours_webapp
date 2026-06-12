@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Component;
+use App\Models\User;
 use App\Support\SchemaPresenter;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ComponentController extends Controller
 {
@@ -14,8 +16,9 @@ class ComponentController extends Controller
      * (same kind + normalized plan key). This powers "hover a component ->
      * see all the places it is used in the chain".
      */
-    public function locations(Component $component): JsonResponse
+    public function locations(Request $request, Component $component): JsonResponse
     {
+        $withEtat = $request->user()?->role === User::ROLE_ADMIN;
         $matches = collect();
 
         if ($component->plan_key) {
@@ -30,7 +33,7 @@ class ComponentController extends Controller
                     'type_label'   => $c->type_label,
                     'plan_koch'    => $c->plan_koch,
                     'repere'       => $c->repere,
-                    'etat'         => $c->etat,
+                    'etat'         => $withEtat ? $c->etat : null,
                     'drum'         => $c->drum ? [
                         'id'      => $c->drum->id,
                         'numero'  => $c->drum->numero,
@@ -45,7 +48,7 @@ class ComponentController extends Controller
         }
 
         return response()->json([
-            'component' => SchemaPresenter::componentSummary($component),
+            'component' => SchemaPresenter::componentSummary($component, $withEtat),
             'count'     => $matches->count(),
             'locations' => $matches->values(),
         ]);

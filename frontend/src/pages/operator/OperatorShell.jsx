@@ -1,9 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
+import SearchPalette, { SearchTrigger } from '../../components/SearchPalette'
+import { useSearchPalette } from '../../lib/useSearchPalette'
 
 export default function OperatorShell({ children, breadcrumb }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { open, openPalette, closePalette } = useSearchPalette()
 
   async function onLogout() {
     await logout()
@@ -23,6 +26,7 @@ export default function OperatorShell({ children, breadcrumb }) {
             </span>
           </Link>
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            <SearchTrigger onOpen={openPalette} />
             {user?.role === 'admin' && (
               <Link
                 to="/admin"
@@ -55,6 +59,8 @@ export default function OperatorShell({ children, breadcrumb }) {
       <main className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-5 sm:px-6 sm:py-6 print:max-w-none print:p-0">
         {children}
       </main>
+
+      {open && <SearchPalette onClose={closePalette} />}
     </div>
   )
 }

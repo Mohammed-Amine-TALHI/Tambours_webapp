@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import QRCode from 'qrcode'
 import OperatorShell from './OperatorShell'
+import { useAuth } from '../../auth/AuthContext'
 import { getConveyor } from '../../lib/schemaApi'
 import {
   EtatBadge, FicheFooter, FicheHeader, FloatingPrintButton,
@@ -13,6 +15,9 @@ import {
 export default function ConveyorView() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  const [qr, setQr] = useState(null)
   // Loaded data is keyed by the route id so switching conveyor shows the
   // skeleton again without resetting state synchronously in the effect.
   const [loaded, setLoaded] = useState(null) // { id, conveyor }
@@ -55,6 +60,13 @@ export default function ConveyorView() {
     }
   }, [reference])
 
+  // QR imprimé sur la fiche : scanner le papier rouvre la page.
+  useEffect(() => {
+    QRCode.toDataURL(window.location.href, { margin: 0, width: 128 })
+      .then(setQr)
+      .catch(() => setQr(null))
+  }, [id])
+
   return (
     <OperatorShell
       breadcrumb={
@@ -84,7 +96,7 @@ export default function ConveyorView() {
 
           {/* Fiche convoyeur */}
           <article className="print-sheet overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
-            <FicheHeader title="Fiche convoyeur" reference={reference} date={printedOn} />
+            <FicheHeader title="Fiche convoyeur" reference={reference} date={printedOn} qr={qr} />
 
             {/* Identité */}
             <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 bg-slate-50/70 px-5 py-4 sm:px-8">
@@ -173,7 +185,8 @@ export default function ConveyorView() {
                       <th className="py-1.5 pr-2 font-semibold">N°</th>
                       <th className="py-1.5 pr-2 font-semibold">Diamètre</th>
                       <th className="py-1.5 pr-2 font-semibold">Longueur</th>
-                      <th className="py-1.5 pr-2 font-semibold">État</th>
+                      {/* les états sont réservés aux administrateurs */}
+                      {isAdmin && <th className="py-1.5 pr-2 font-semibold">État</th>}
                       <th className="py-1.5 font-semibold">Composants</th>
                     </tr>
                   </thead>
@@ -183,7 +196,7 @@ export default function ConveyorView() {
                         <td className="py-1.5 pr-2 font-bold text-emerald-700">{d.numero}</td>
                         <td className="py-1.5 pr-2">{d.diametre ? `Ø ${d.diametre}` : '—'}</td>
                         <td className="py-1.5 pr-2">{d.longueur ? `L ${d.longueur}` : '—'}</td>
-                        <td className="py-1.5 pr-2">{d.etat || '—'}</td>
+                        {isAdmin && <td className="py-1.5 pr-2">{d.etat || '—'}</td>}
                         <td className="py-1.5 text-slate-600">
                           {(d.components ?? [])
                             .map((c) => c.type_label || c.kind)
@@ -192,7 +205,7 @@ export default function ConveyorView() {
                       </tr>
                     ))}
                     {drums.length === 0 && (
-                      <tr><td colSpan={5} className="py-2 text-slate-400">Aucun tambour.</td></tr>
+                      <tr><td colSpan={isAdmin ? 5 : 4} className="py-2 text-slate-400">Aucun tambour.</td></tr>
                     )}
                   </tbody>
                 </table>

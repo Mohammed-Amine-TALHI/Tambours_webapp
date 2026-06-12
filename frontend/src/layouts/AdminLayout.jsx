@@ -1,9 +1,12 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import SearchPalette, { SearchTrigger } from '../components/SearchPalette'
+import { useSearchPalette } from '../lib/useSearchPalette'
 
 export default function AdminLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { open, openPalette, closePalette } = useSearchPalette()
 
   async function onLogout() {
     await logout()
@@ -24,6 +27,7 @@ export default function AdminLayout() {
             </span>
           </Link>
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            <SearchTrigger onOpen={openPalette} />
             <Link
               to="/app"
               className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
@@ -53,6 +57,7 @@ export default function AdminLayout() {
           <nav className="flex gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 lg:flex-col lg:overflow-visible">
             <SideLink to="/admin/design" icon={ShapesIcon} label="Design du schéma" desc="Zones sur le plan maître" />
             <SideLink to="/admin/import" icon={UploadIcon} label="Importer Excel" desc="Convoyeurs & tambours" />
+            <SideLink to="/admin/etats" icon={TagIcon} label="États" desc="Statuts personnalisés" />
             <SideLink to="/admin/users" icon={UsersIcon} label="Utilisateurs" desc="Comptes & accès" />
 
             <div className="my-1 hidden border-t border-slate-100 lg:block" />
@@ -73,6 +78,8 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      {open && <SearchPalette onClose={closePalette} />}
     </div>
   )
 }
@@ -133,6 +140,15 @@ function UsersIcon({ className }) {
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  )
+}
+
+function TagIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12.6 2.9 21 11.3a2 2 0 0 1 0 2.8l-6.9 6.9a2 2 0 0 1-2.8 0L2.9 12.6A2 2 0 0 1 2.3 11l.6-6.1a2 2 0 0 1 1.8-1.8L10.8 2.5a2 2 0 0 1 1.8.4Z" />
+      <circle cx="8" cy="8" r="1.5" />
     </svg>
   )
 }

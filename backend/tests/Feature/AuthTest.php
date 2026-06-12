@@ -18,7 +18,7 @@ class AuthTest extends TestCase
         ]);
 
         $this->postJson('/api/login', [
-            'username' => 'alice',
+            'login' => 'alice',
             'password' => 'Str0ng@Password1',
         ])->assertOk()->assertJsonPath('user.username', 'alice');
 
@@ -32,9 +32,9 @@ class AuthTest extends TestCase
             'password' => 'Str0ng@Password1',
         ]);
 
-        $this->postJson('/api/login', ['username' => 'bob', 'password' => 'nope'])
+        $this->postJson('/api/login', ['login' => 'bob', 'password' => 'nope'])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('username');
+            ->assertJsonValidationErrors('login');
 
         $this->assertSame(1, $user->fresh()->failed_login_count);
         $this->assertGuest();
@@ -48,7 +48,7 @@ class AuthTest extends TestCase
         ]);
 
         for ($i = 0; $i < User::MAX_FAILED_ATTEMPTS; $i++) {
-            $this->postJson('/api/login', ['username' => 'carol', 'password' => 'nope'])
+            $this->postJson('/api/login', ['login' => 'carol', 'password' => 'nope'])
                 ->assertStatus(422);
         }
 
@@ -57,7 +57,7 @@ class AuthTest extends TestCase
         $this->assertTrue($user->isLocked());
 
         // Even the correct password is refused while the account is locked.
-        $this->postJson('/api/login', ['username' => 'carol', 'password' => 'Str0ng@Password1'])
+        $this->postJson('/api/login', ['login' => 'carol', 'password' => 'Str0ng@Password1'])
             ->assertStatus(422);
     }
 
@@ -68,9 +68,9 @@ class AuthTest extends TestCase
             'password' => 'Str0ng@Password1',
         ]);
 
-        $this->postJson('/api/login', ['username' => 'dave', 'password' => 'Str0ng@Password1'])
+        $this->postJson('/api/login', ['login' => 'dave', 'password' => 'Str0ng@Password1'])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('username');
+            ->assertJsonValidationErrors('login');
 
         $this->assertGuest();
     }

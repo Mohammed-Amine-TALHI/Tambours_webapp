@@ -21,6 +21,13 @@ body {
   background: rgba(16, 185, 129, 0.22);
 }
 
+/* Visible keyboard focus, brand-coloured (mouse clicks stay clean). */
+:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 /* Backdrop for auth pages: emerald glows + faint engineering grid. */
 .auth-bg {
   background-color: #f8fafc;

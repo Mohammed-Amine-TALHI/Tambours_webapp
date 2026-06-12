@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api, { ensureCsrf } from '../../lib/api'
 import TempPasswordModal from '../../components/TempPasswordModal'
+import ConfirmDialog from '../../components/ConfirmDialog'
 
 export default function UsersList() {
   const [users, setUsers] = useState([])
@@ -9,6 +10,8 @@ export default function UsersList() {
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [modal, setModal] = useState({ open: false, user: null, password: '' })
+  const [filter, setFilter] = useState('')
+  const [confirm, setConfirm] = useState(null) // { type: 'reset' | 'delete', user }
 
   useEffect(() => {
     let active = true
@@ -22,7 +25,6 @@ export default function UsersList() {
   }, [])
 
   async function resetPassword(user) {
-    if (!window.confirm(`Réinitialiser le mot de passe de ${user.username} ?`)) return
     setBusyId(user.id)
     try {
       await ensureCsrf()
@@ -30,7 +32,7 @@ export default function UsersList() {
       setModal({ open: true, user: data.user, password: data.temp_password })
       setUsers((list) => list.map((u) => (u.id === user.id ? data.user : u)))
     } catch (err) {
-      alert(err?.response?.data?.message ?? 'Erreur lors de la réinitialisation.')
+      setError(err?.response?.data?.message ?? 'Erreur lors de la réinitialisation.')
     } finally {
       setBusyId(null)
     }
@@ -52,18 +54,24 @@ export default function UsersList() {
   }
 
   async function deleteUser(user) {
-    if (!window.confirm(`Supprimer définitivement ${user.username} ?`)) return
     setBusyId(user.id)
     try {
       await ensureCsrf()
       await api.delete(`/api/admin/users/${user.id}`)
       setUsers((list) => list.filter((u) => u.id !== user.id))
     } catch (err) {
-      alert(err?.response?.data?.message ?? 'Erreur.')
+      setError(err?.response?.data?.message ?? 'Erreur.')
     } finally {
       setBusyId(null)
     }
   }
+
+  const f = filter.trim().toLowerCase()
+  const shown = !f
+    ? users
+    : users.filter((u) =>
+        [u.first_name, u.last_name, u.username, u.email].some((v) => (v ?? '').toLowerCase().includes(f)),
+      )
 
   return (
     <div className="space-y-5">
@@ -94,6 +102,13 @@ export default function UsersList() {
         </div>
       )}
 
+      <input
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Rechercher un nom, un username, un email…"
+        className="input max-w-sm"
+      />
+
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
@@ -110,10 +125,14 @@ export default function UsersList() {
               {loading && (
                 <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-500">Chargement…</td></tr>
               )}
-              {!loading && users.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-500">Aucun utilisateur.</td></tr>
+              {!loading && shown.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
+                    {users.length === 0 ? 'Aucun utilisateur.' : 'Aucun résultat pour cette recherche.'}
+                  </td>
+                </tr>
               )}
-              {users.map((u) => (
+              {shown.map((u) => (
                 <tr key={u.id} className="hover:bg-slate-50/60">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -148,7 +167,7 @@ export default function UsersList() {
                   <td className="space-x-1 whitespace-nowrap px-4 py-3 text-right">
                     <button
                       disabled={busyId === u.id}
-                      onClick={() => resetPassword(u)}
+                      onClick={() => setConfirm({ type: 'reset', user: u })}
                       className="rounded-md border border-emerald-200 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
                     >
                       Reset MDP
@@ -162,7 +181,7 @@ export default function UsersList() {
                     </button>
                     <button
                       disabled={busyId === u.id}
-                      onClick={() => deleteUser(u)}
+                      onClick={() => setConfirm({ type: 'delete', user: u })}
                       className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
                     >
                       Supprimer
@@ -180,6 +199,25 @@ export default function UsersList() {
         user={modal.user}
         password={modal.password}
         onClose={() => setModal({ open: false, user: null, password: '' })}
+      />
+
+      <ConfirmDialog
+        open={!!confirm}
+        danger={confirm?.type === 'delete'}
+        title={confirm?.type === 'delete' ? 'Supprimer cet utilisateur ?' : 'Réinitialiser le mot de passe ?'}
+        message={
+          confirm?.type === 'delete'
+            ? `Le compte « ${confirm?.user?.username} » sera définitivement supprimé.`
+            : `Un nouveau mot de passe temporaire sera généré pour « ${confirm?.user?.username} ».`
+        }
+        confirmLabel={confirm?.type === 'delete' ? 'Supprimer' : 'Réinitialiser'}
+        onConfirm={() => {
+          const c = confirm
+          setConfirm(null)
+          if (c?.type === 'delete') deleteUser(c.user)
+          else if (c?.type === 'reset') resetPassword(c.user)
+        }}
+        onCancel={() => setConfirm(null)}
       />
     </div>
   )

@@ -12,8 +12,9 @@ export function PrinterIcon({ className }) {
   )
 }
 
-/** Bandeau d'en-tête vert commun à toutes les fiches. */
-export function FicheHeader({ title, reference, date }) {
+/** Bandeau d'en-tête vert commun à toutes les fiches.
+    `qr` (data URL) s'imprime à droite : scanner le papier rouvre la fiche. */
+export function FicheHeader({ title, reference, date, qr }) {
   return (
     <header className="relative bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-700 px-5 py-5 text-white sm:px-8">
       <div
@@ -30,9 +31,18 @@ export function FicheHeader({ title, reference, date }) {
             <h1 className="text-xl font-bold sm:text-2xl">{title}</h1>
           </div>
         </div>
-        <div className="text-left sm:text-right">
-          <p className="font-mono text-sm font-semibold tracking-wider">{reference}</p>
-          <p className="text-xs text-emerald-200">Éditée le {date}</p>
+        <div className="flex items-center gap-3">
+          <div className="text-left sm:text-right">
+            <p className="font-mono text-sm font-semibold tracking-wider">{reference}</p>
+            <p className="text-xs text-emerald-200">Éditée le {date}</p>
+          </div>
+          {qr && (
+            <img
+              src={qr}
+              alt="QR — ouvrir la fiche en ligne"
+              className="hidden h-16 w-16 rounded-md bg-white p-1 print:block"
+            />
+          )}
         </div>
       </div>
     </header>

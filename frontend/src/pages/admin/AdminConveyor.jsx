@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import {
   getConveyorAdmin, updateConveyor, updateDrum,
   uploadDatasheet, deleteDatasheet, KIND_LABEL,
+  getEtats, createEtat, uploadDrumPhoto, deleteDrumPhoto,
 } from '../../lib/schemaApi'
 import Spinner from '../../components/Spinner'
 import { SectionTitle } from '../../components/fiche'
@@ -16,10 +17,20 @@ export default function AdminConveyor() {
   const { id } = useParams()
   const [conveyor, setConveyor] = useState(null)
   const [error, setError] = useState(null)
+  const [etats, setEtats] = useState([])
 
   useEffect(() => {
     getConveyorAdmin(id).then(setConveyor).catch(() => setError('Convoyeur introuvable.'))
   }, [id])
+
+  // Vocabulaire d'états partagé par tous les éditeurs de tambour.
+  useEffect(() => {
+    let active = true
+    getEtats().then((list) => active && setEtats(list)).catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
 
   if (error) return <p className="text-sm text-rose-600">{error}</p>
   if (!conveyor) return <div className="flex items-center gap-3 text-slate-500 text-sm py-16 justify-center"><Spinner /> Chargement…</div>
@@ -54,7 +65,12 @@ export default function AdminConveyor() {
       <div className="space-y-4">
         <SectionTitle no="03">Tambours, composants & fiches techniques</SectionTitle>
         {conveyor.drums.map((d) => (
-          <DrumEditor key={d.id} drum={d} />
+          <DrumEditor
+            key={d.id}
+            drum={d}
+            etats={etats}
+            onEtatCreated={(e) => setEtats((xs) => [...xs, e])}
+          />
         ))}
         {conveyor.drums.length === 0 && <p className="text-sm text-slate-400">Aucun tambour.</p>}
       </div>
@@ -143,7 +159,7 @@ function InfoEditor({ conveyor, onSaved }) {
 }
 
 /* ---------------- drum + components ---------------- */
-function DrumEditor({ drum }) {
+function DrumEditor({ drum, etats, onEtatCreated }) {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({
     diametre: drum.diametre ?? '', longueur: drum.longueur ?? '', etat: drum.etat ?? '',
@@ -181,10 +197,14 @@ function DrumEditor({ drum }) {
           <div className="grid grid-cols-2 gap-3 pt-4 md:grid-cols-3">
             <Field label="Diamètre"><input value={form.diametre} onChange={(e) => upd('diametre', e.target.value)} placeholder="ex : 1000" className="input text-sm" /></Field>
             <Field label="Longueur"><input value={form.longueur} onChange={(e) => upd('longueur', e.target.value)} placeholder="ex : 1800" className="input text-sm" /></Field>
-            <Field label="État"><input value={form.etat} onChange={(e) => upd('etat', e.target.value)} placeholder="ex : bon" className="input text-sm" /></Field>
+            <Field label="État">
+              <EtatSelect value={form.etat} onChange={(v) => upd('etat', v)} etats={etats} onCreated={onEtatCreated} />
+            </Field>
             <Field label="Dynano bloc"><input value={form.liaison_dynano} onChange={(e) => upd('liaison_dynano', e.target.value)} placeholder="ex : 200/260" className="input text-sm" /></Field>
             <Field label="Anano bloc"><input value={form.liaison_anano} onChange={(e) => upd('liaison_anano', e.target.value)} className="input text-sm" /></Field>
-            <Field label="État liaison"><input value={form.liaison_etat} onChange={(e) => upd('liaison_etat', e.target.value)} placeholder="ex : disp (Mag)" className="input text-sm" /></Field>
+            <Field label="État liaison">
+              <EtatSelect value={form.liaison_etat} onChange={(v) => upd('liaison_etat', v)} etats={etats} onCreated={onEtatCreated} />
+            </Field>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={save} disabled={saving}
@@ -193,6 +213,9 @@ function DrumEditor({ drum }) {
             </button>
             {saved && <span className="text-xs text-emerald-600">Enregistré ✓</span>}
           </div>
+
+          {/* photo de la fiche */}
+          <DrumPhotoEditor drum={drum} />
 
           {/* components datasheets */}
           {drum.components.map((cmp) => (
@@ -207,6 +230,166 @@ function DrumEditor({ drum }) {
           <DatasheetSection title="Fiches du tambour (général)" initial={drum.datasheets} target={{ drumId: drum.id }} />
         </div>
       )}
+    </div>
+  )
+}
+
+/* ---------------- état dropdown (liste personnalisable, « + » en fin de liste) ---------------- */
+function EtatSelect({ value, onChange, etats, onCreated }) {
+  const [addingNew, setAddingNew] = useState(false)
+  const [newLabel, setNewLabel] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState(null)
+
+  const labels = etats.map((e) => e.label)
+  const currentMissing = value && !labels.includes(value)
+
+  async function saveNew() {
+    const label = newLabel.trim()
+    if (!label) return
+    setSaving(true)
+    setErr(null)
+    try {
+      const etat = await createEtat({ label })
+      onCreated(etat)
+      onChange(label)
+      setAddingNew(false)
+      setNewLabel('')
+    } catch (e) {
+      setErr(e?.response?.data?.errors?.label?.[0] ?? 'Ajout impossible.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (addingNew) {
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-1.5">
+          <input
+            autoFocus
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); saveNew() }
+              if (e.key === 'Escape') setAddingNew(false)
+            }}
+            placeholder="Nouvel état…"
+            className="input min-w-0 text-sm"
+          />
+          <button
+            type="button"
+            onClick={saveNew}
+            disabled={saving || !newLabel.trim()}
+            className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {saving ? '…' : 'OK'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAddingNew(false); setErr(null) }}
+            aria-label="Annuler"
+            className="shrink-0 rounded-lg px-2 py-2 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          >
+            ✕
+          </button>
+        </div>
+        {err && <p className="text-xs text-red-600">{err}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <select
+      value={value ?? ''}
+      onChange={(e) => {
+        if (e.target.value === '__new__') setAddingNew(true)
+        else onChange(e.target.value)
+      }}
+      className="input bg-white text-sm"
+    >
+      <option value="">—</option>
+      {currentMissing && <option value={value}>{value}</option>}
+      {etats.map((e) => (
+        <option key={e.id} value={e.label}>{e.label}</option>
+      ))}
+      <option value="__new__">＋ Nouvel état…</option>
+    </select>
+  )
+}
+
+/* ---------------- photo affichée au centre de la fiche tambour ---------------- */
+function DrumPhotoEditor({ drum }) {
+  const inputRef = useRef(null)
+  const [photoUrl, setPhotoUrl] = useState(drum.photo_url ?? null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+
+  async function onFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true)
+    setErr(null)
+    try {
+      setPhotoUrl(await uploadDrumPhoto(drum.id, file))
+    } catch (e2) {
+      setErr(e2?.response?.data?.errors?.photo?.[0] ?? e2?.response?.data?.message ?? "Échec de l'envoi.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onRemove() {
+    setBusy(true)
+    setErr(null)
+    try {
+      await deleteDrumPhoto(drum.id)
+      setPhotoUrl(null)
+    } catch {
+      setErr('Suppression impossible.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+        Photo du tambour (centre de la fiche)
+      </h4>
+      <div className="flex flex-wrap items-center gap-3">
+        {photoUrl ? (
+          <img src={photoUrl} alt={`Photo du tambour ${drum.numero}`} className="h-24 w-auto rounded-lg border border-slate-200 bg-white object-cover" />
+        ) : (
+          <div className="flex h-24 w-20 items-center justify-center rounded-lg border-2 border-dashed border-slate-200 text-[10px] text-slate-400">
+            Aucune photo
+          </div>
+        )}
+        <div className="flex flex-col gap-1.5">
+          <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={onFile} className="hidden" />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+          >
+            {busy ? 'Envoi…' : photoUrl ? 'Remplacer la photo' : '+ Ajouter une photo'}
+          </button>
+          {photoUrl && (
+            <button
+              type="button"
+              onClick={onRemove}
+              disabled={busy}
+              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              Retirer
+            </button>
+          )}
+        </div>
+      </div>
+      {err && <p className="text-xs text-red-600">{err}</p>}
+      <p className="text-xs text-slate-400">JPEG, PNG ou WebP · 8 Mo max. Affichée au centre de la fiche imprimable.</p>
     </div>
   )
 }

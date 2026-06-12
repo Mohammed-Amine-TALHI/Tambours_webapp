@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ConveyorController as AdminConveyorController;
 use App\Http\Controllers\Admin\DatasheetController as AdminDatasheetController;
 use App\Http\Controllers\Admin\DrumController as AdminDrumController;
 use App\Http\Controllers\Admin\EmailDomainController;
+use App\Http\Controllers\Admin\EtatLabelController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ComponentController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\DrumController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\SchemaController;
+use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -50,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/email-domains', [EmailDomainController::class, 'active']);
 
         // ------ Schema consultation (operators + admins) ------
+        Route::get('/search',                          [SearchController::class, 'search']);
         Route::get('/schema/master',                   [SchemaController::class, 'master']);
         Route::get('/conveyors',                       [ConveyorController::class, 'index']);
         Route::get('/conveyors/{conveyor}',            [ConveyorController::class, 'show']);
@@ -78,10 +81,18 @@ Route::middleware('auth:sanctum')->group(function () {
             // Excel import — bulk conveyor characteristics (matched by code)
             Route::post('/import/characteristics', [AdminConveyorController::class, 'importCharacteristics']);
 
+            // Personalised état vocabulary (labels + badge tones)
+            Route::get   ('/etats',             [EtatLabelController::class, 'index']);
+            Route::post  ('/etats',             [EtatLabelController::class, 'store']);
+            Route::patch ('/etats/{etatLabel}', [EtatLabelController::class, 'update']);
+            Route::delete('/etats/{etatLabel}', [EtatLabelController::class, 'destroy']);
+
             // Schema design editor — zones, conveyor info, drums, datasheets
             Route::get  ('/conveyors/{conveyor}', [AdminConveyorController::class, 'show']);
             Route::patch('/conveyors/{conveyor}', [AdminConveyorController::class, 'update']);
             Route::patch('/drums/{drum}',         [AdminDrumController::class, 'update']);
+            Route::post  ('/drums/{drum}/photo',  [AdminDrumController::class, 'storePhoto']);
+            Route::delete('/drums/{drum}/photo',  [AdminDrumController::class, 'destroyPhoto']);
             Route::post  ('/datasheets',              [AdminDatasheetController::class, 'store']);
             Route::delete('/datasheets/{datasheet}',  [AdminDatasheetController::class, 'destroy']);
         });

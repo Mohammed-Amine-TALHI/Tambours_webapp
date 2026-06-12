@@ -24,6 +24,18 @@ class DatasheetController extends Controller
 
         $name = $datasheet->original_name ?: ($datasheet->title . '.pdf');
 
+        // PDFs and images open inline in a browser tab (quicker to consult);
+        // everything else (Word, Excel…) downloads as before.
+        $inline = in_array($datasheet->mime, [
+            'application/pdf', 'image/png', 'image/jpeg', 'image/webp',
+        ], true);
+
+        if ($inline) {
+            return Storage::disk('local')->response($datasheet->file_path, $name, [
+                'Content-Disposition' => 'inline; filename="' . addslashes($name) . '"',
+            ]);
+        }
+
         return Storage::disk('local')->download($datasheet->file_path, $name);
     }
 }

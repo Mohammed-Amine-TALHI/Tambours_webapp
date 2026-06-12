@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Conveyor;
+use App\Models\User;
 use App\Support\SchemaPresenter;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ConveyorController extends Controller
 {
@@ -28,12 +30,15 @@ class ConveyorController extends Controller
      * Conveyor + its drums (with circles + component summary) for the
      * "click a conveyor" window.
      */
-    public function show(Conveyor $conveyor): JsonResponse
+    public function show(Request $request, Conveyor $conveyor): JsonResponse
     {
         $conveyor->load(['drums.components']);
 
         return response()->json([
-            'conveyor' => SchemaPresenter::conveyorDetail($conveyor),
+            'conveyor' => SchemaPresenter::conveyorDetail(
+                $conveyor,
+                withEtat: $request->user()?->role === User::ROLE_ADMIN,
+            ),
         ]);
     }
 }
