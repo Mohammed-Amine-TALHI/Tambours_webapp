@@ -148,7 +148,7 @@ export default function DrumDetail() {
               {/* 02 — Vue & composants : photo au centre, composants de part et d'autre */}
               <section>
                 <SectionTitle no="02">Composants</SectionTitle>
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_260px_1fr] print:grid-cols-[1fr_190px_1fr] print:gap-3">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px_1fr] print:grid-cols-[1fr_260px_1fr] print:gap-3">
                   <div className="order-2 space-y-5 lg:order-1 print:order-1 print:space-y-3">
                     {leftComponents.map((c) => (
                       <ComponentCard key={c.id} component={c} />
@@ -205,7 +205,7 @@ export default function DrumDetail() {
 function PhotoPlaceholder({ numero, photoUrl, className = '' }) {
   if (photoUrl) {
     return (
-      <figure className={`mx-auto w-full max-w-[280px] self-start overflow-hidden rounded-2xl border border-slate-200 bg-white print:max-w-none ${className}`}>
+      <figure className={`mx-auto w-full max-w-[380px] self-start overflow-hidden rounded-2xl border border-slate-200 bg-white print:max-w-none ${className}`}>
         <img src={photoUrl} alt={`Photo du tambour ${numero}`} className="h-auto w-full object-cover" />
         <figcaption className="border-t border-slate-100 px-3 py-1.5 text-center text-xs text-slate-500">
           Tambour {numero}
@@ -216,7 +216,7 @@ function PhotoPlaceholder({ numero, photoUrl, className = '' }) {
 
   return (
     <figure
-      className={`relative mx-auto flex aspect-[3/4] w-full max-w-[280px] flex-col items-center justify-center self-start rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 px-4 text-center print:max-w-none ${className}`}
+      className={`relative mx-auto flex aspect-[4/5] w-full max-w-[380px] flex-col items-center justify-center self-start rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 px-4 text-center print:max-w-none ${className}`}
     >
       {/* repères d'angle façon plan technique */}
       <CornerMark className="left-2 top-2 border-l-2 border-t-2" />
