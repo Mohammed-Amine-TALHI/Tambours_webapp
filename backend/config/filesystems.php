@@ -33,7 +33,10 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Off on purpose: the framework's serve route claims /storage/{path}
+            // and would resolve public images (schemas, drum photos) against the
+            // private disk. Private files are streamed by DatasheetController.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
